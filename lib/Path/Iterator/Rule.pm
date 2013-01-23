@@ -4,7 +4,7 @@ use warnings;
 
 package Path::Iterator::Rule;
 # ABSTRACT: Iterative, recursive file finder
-our $VERSION = '0.002'; # VERSION
+our $VERSION = '0.003'; # VERSION
 
 # Register warnings category
 use warnings::register;
@@ -28,7 +28,7 @@ use namespace::clean;
 
 sub new {
     my $class = shift;
-    return bless { rules => [ sub () { 1 } ] }, ref $class || $class;
+    return bless { rules => [] }, ref $class || $class;
 }
 
 sub clone {
@@ -94,55 +94,76 @@ sub iter {
         ref( $_[0] )  && !blessed( $_[0] )  ? shift
       : ref( $_[-1] ) && !blessed( $_[-1] ) ? pop
       :                                       {};
-    my $opts = { %defaults, %$args };
+    my %opts = ( %defaults, %$args );
+
+    # unroll these for efficiency
+    my $opt_depthfirst      = $opts{depthfirst};
+    my $opt_follow_symlinks = $opts{follow_symlinks};
+    my $opt_sorted          = $opts{sorted};
+    my $opt_loop_safe       = $opts{loop_safe};
+    my $opt_error_handler   = $opts{error_handler};
+    my $has_rules           = @{ $self->{rules} };
+    my $stash               = {};
+
+    # queue structure: flat list in tuples of 3: (object, basename, depth)
+    # if object is arrayref, then that's a special case signal that it
+    # was already of interest and can finally be returned for postorder searches
     my @queue =
-      map { { base => basename("$_"), path => $self->_objectify($_), depth => 0 } }
-      @_ ? @_ : '.';
-    my $stash = {};
-    my %seen;
+      map { ( $self->_objectify($_), basename("$_"), 0 ) } @_ ? @_ : '.';
 
     return sub {
         LOOP: {
-            my $task = shift @queue
-              or return;
-            my ( $base, $item, $depth ) = @{$task}{qw/base path depth/};
+            my ( $item, $base, $depth ) = splice( @queue, 0, 3 );
+            return unless $item;
             return $item->[0] if ref $item eq 'ARRAY'; # deferred for postorder
             my $string_item = "$item";
-            if ( !$opts->{follow_symlinks} ) {
+            if ( !$opt_follow_symlinks ) {
                 redo LOOP if -l $string_item;
             }
-            local $_ = $item;
-            $stash->{_depth} = $depth;
-            my $interest;
-            if ( $opts->{error_handler} ) {
-                $interest =
-                  try { $self->test( $item, $base, $stash ) }
-                catch { $opts->{error_handler}->( $item, $_ ) };
-            }
-            else {
-                $interest = $self->test( $item, $base, $stash );
-            }
-            my $prune = $interest && !( 0 + $interest ); # capture "0 but true"
-            $interest += 0;                              # then ignore "but true"
 
+            # by default, we're interested in everything and prune nothing
+            my ( $interest, $prune ) = ( 1, 0 );
+            if ($has_rules) {
+                local $_ = $item;
+                $stash->{_depth} = $depth;
+                if ($opt_error_handler) {
+                    $interest =
+                      try { $self->test( $item, $base, $stash ) }
+                    catch { $opt_error_handler->( $item, $_ ) };
+                }
+                else {
+                    $interest = $self->test( $item, $base, $stash );
+                }
+                $prune = $interest && !( 0 + $interest ); # capture "0 but true"
+                $interest += 0;                           # then ignore "but true"
+            }
+
+            # if it's a directory, maybe add children to the queue
             if (   -d $string_item
                 && !$prune
-                && ( !$opts->{loop_safe} || $self->_is_unique( $string_item, $stash ) ) )
+                && ( !$opt_loop_safe || $self->_is_unique( $string_item, $stash ) ) )
             {
                 if ( !-r $string_item ) {
                     warnings::warnif("Directory '$string_item' is not readable. Skipping it");
                 }
-                elsif ( $opts->{depthfirst} ) {
-                    my @next = $self->_taskify( $opts, $depth + 1, $self->_children($item) );
-                    # for postorder, requeue as reference to signal it can be returned
-                    # without being retested
-                    push @next, { base => $base, path => [$item], depth => $depth }
-                      if $interest && $opts->{depthfirst} > 0;
-                    unshift @queue, @next;
-                    redo LOOP if $opts->{depthfirst} > 0;
-                }
                 else {
-                    push @queue, $self->_taskify( $opts, $depth + 1, $self->_children($item) );
+                    my @paths = $self->_children($item);
+                    if ($opt_sorted) {
+                        @paths = sort { "$a->[0]" cmp "$b->[0]" } @paths;
+                    }
+                    my @next = map { ( $_->[1], $_->[0], $depth + 1 ) } @paths;
+
+                    if ($opt_depthfirst) {
+                        # for postorder, requeue as reference to signal it can be returned
+                        # without being retested
+                        push @next, [$item], $base, $depth
+                          if $interest && $opt_depthfirst > 0;
+                        unshift @queue, @next;
+                        redo LOOP if $opt_depthfirst > 0;
+                    }
+                    else {
+                        push @queue, @next;
+                    }
                 }
             }
             return $item
@@ -216,7 +237,7 @@ sub test {
         $result = $rule->( $item, $base, $stash ) || 0;
         return $result if !( 0 + $result ); # want to shortcut on "0 but true"
     }
-    return $result;
+    return $result // 1;                    # not defined means we had no rules
 }
 
 #--------------------------------------------------------------------------#
@@ -240,14 +261,6 @@ sub _rulify {
         push @rules, $rule;
     }
     return @rules;
-}
-
-sub _taskify {
-    my ( $self, $opts, $depth, @paths ) = @_;
-    if ( $opts->{sorted} ) {
-        @paths = sort { "$a->[0]" cmp "$b->[0]" } @paths;
-    }
-    return map { { base => $_->[0], path => $_->[1], depth => $depth } } @paths;
 }
 
 sub _is_unique {
@@ -506,7 +519,7 @@ Path::Iterator::Rule - Iterative, recursive file finder
 
 =head1 VERSION
 
-version 0.002
+version 0.003
 
 =head1 SYNOPSIS
 
@@ -1049,6 +1062,35 @@ If you want speed, set these options:
 
     my $iter = $rule->iter( @dirs, \%options );
 
+Depending on the file structure being searched, you might also want to set C<<
+depthfirst => 1 >>. If you have lots of nested directories and all the files at
+the bottom, a depth first search might do less work or use less memory,
+particularly if the search will be halted early (e.g. finding the first N
+matches.)
+
+Rules will shortcut on failure, so be sure to put rules likely to fail
+early in a rule chain.
+
+Consider:
+
+    $r1 = Path::Iterator::Rule->new->name(qr/foo/)->file;
+    $r2 = Path::Iterator::Rule->new->file->name(qr/foo/);
+
+If there are lots of files, but only a few containing "foo", then
+C<$r1> above will be faster.
+
+Rules are implemented as code references, so long chains have
+some overhead.  Consider testing with a custom coderef that
+combines several tests into one.
+
+Consider:
+
+    $r3 = Path::Iterator::Rule->new->and( sub { -x -w -r $_ } );
+    $r4 = Path::Iterator::Rule->new->executable->writeable->readable;
+
+Rule C<$r3> above will be much faster, not only because it stacks
+the file tests, but because it requires only a single code reference.
+
 =head1 CAVEATS
 
 Some features are still unimplemented:
@@ -1131,6 +1173,20 @@ to include or exclude, with control over recursion.  A callback is applied to
 each file (or directory) in the set.  There is no iterator.  There is no
 control over ordering.  Symlinks are not followed.  It has several extra
 features for checksumming the set and creating tarballs with F</bin/tar>.
+
+=head1 THANKS
+
+Thank you to Ricardo Signes (rjbs) for inspiring me to write yet another file
+finder module, for writing file finder optimization benchmarks, and tirelessly
+running my code over and over to see if it got faster.
+
+=over 4
+
+=item *
+
+See L<the speed of Perl file finders|http://rjbs.manxome.org/rubric/entry/1981>
+
+=back
 
 =for :stopwords cpan testmatrix url annocpan anno bugtracker rt cpants kwalitee diff irc mailto metadata placeholders metacpan
 
