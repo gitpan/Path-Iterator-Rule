@@ -2,7 +2,7 @@ NAME
     Path::Iterator::Rule - Iterative, recursive file finder
 
 VERSION
-    version 0.001
+    version 0.002
 
 SYNOPSIS
       use Path::Iterator::Rule;
@@ -44,7 +44,7 @@ DESCRIPTION
 
     *   follows symlinks (by default, but can be disabled)
 
-    *   directories visited only once (no infinite loops)
+    *   directories visited only once (no infinite loop; can be disabled)
 
     *   doesn't chdir during operation
 
@@ -88,13 +88,17 @@ USAGE
         (pre-order, depth-first search). Default is 0.
 
     *   "error_handler" -- Catches errors during execution of rule tests.
-        Default handler dies with the filename and error.
+        Default handler dies with the filename and error. If set to undef,
+        error handling is disabled.
 
     *   "follow_symlinks" -- Follow directory symlinks when true. Default is
         1.
 
     *   "loop_safe" -- Prevents visiting the same directory more than once
         when true. Default is 1.
+
+    *   "sorted" -- Whether entries in a directory are sorted before
+        processing. Default is 1.
 
     Filesystem loops might exist from either hard or soft links. The
     "loop_safe" option prevents infinite loops, but adds some overhead by
@@ -347,13 +351,18 @@ EXTENDING
   Custom rule subroutines
     Rules are implemented as (usually anonymous) subroutines callbacks that
     return a value indicating whether or not the rule matches. These
-    callbacks are called with two arguments. The first argument is a path,
+    callbacks are called with three arguments. The first argument is a path,
     which is also locally aliased as the $_ global variable for convenience
     in simple tests.
 
       $rule->and( sub { -r -w -x $_ } ); # tests $_
 
-    The second argument is a hash reference that can be used to maintain
+    The second argument is the basename of the path, which is useful for
+    certain types of name checks:
+
+      $rule->and( sub { $_[1] =~ /foo|bar/ } ); "foo" or "bar" in basename;
+
+    The third argument is a hash reference that can be used to maintain
     state. Keys beginning with an underscore are reserved for
     "Path::Iterator::Rule" to provide additional data about the search in
     progress. For example, the "_depth" key is used to support minimum and
@@ -379,7 +388,7 @@ EXTENDING
 
       $rule->and(
         sub {
-          my ($path, $stash) = @_;
+          my ($path, $basename, $stash) = @_;
           return $stash->{_depth} <= 3 ? 1 : "0 but true";
         }
       );
@@ -406,15 +415,14 @@ EXTENDING
       package Path::Iterator::Rule::Foo;
 
       use Path::Iterator::Rule;
-      use File::Basename qw/basename/;
 
       Path::Iterator::Rule->add_helper(
         foo => sub {
           my @args = @_; # do this to customize closure with arguments
           return sub {
-            my ($item) = shift;
+            my ($item, $basename) = shift;
             return if -d "$item";
-            return basename($item) =~ /^foo$/;
+            return $basename =~ /^foo$/;
           }
         }
       );
@@ -438,8 +446,11 @@ EXTENDING
 
     *   _objectify -- given a path, return an object
 
-    *   _chilren -- given a directory, return an (unsorted) list of entries
-        within it, excluding "." and ".."
+    *   _children -- given a directory, return an (unsorted) list of [
+        basename, full path ] entries within it, excluding "." and ".."
+
+    Note that "_children" should return a *list* of *tuples*, where the
+    tuples are basename and full path.
 
     See Path::Class::Rule source for an example.
 
@@ -450,6 +461,21 @@ LEXICAL WARNINGS
     statement at the correct scope:
 
       no warnings 'Path::Iterator::Rule';
+
+PERFORMANCE
+    By default, "Path::Iterator::Rule" iterator options are "slow but safe".
+    They ensure uniqueness, return files in sorted order, and throw nice
+    error messages if something goes wrong.
+
+    If you want speed, set these options:
+
+        my %options = (
+            loop_safe => 0,
+            sorted => 0,
+            error_handler => undef
+        );
+
+        my $iter = $rule->iter( @dirs, \%options );
 
 CAVEATS
     Some features are still unimplemented:

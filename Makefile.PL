@@ -33,7 +33,6 @@ my %WriteMakefileArgs = (
     "Carp" => 0,
     "Data::Clone" => 0,
     "File::Basename" => 0,
-    "IO::Dir" => 0,
     "List::Util" => 0,
     "Number::Compare" => "0.02",
     "Scalar::Util" => 0,
@@ -45,7 +44,7 @@ my %WriteMakefileArgs = (
     "warnings" => 0,
     "warnings::register" => 0
   },
-  "VERSION" => "0.001",
+  "VERSION" => "0.002",
   "test" => {
     "TESTS" => "t/*.t"
   }

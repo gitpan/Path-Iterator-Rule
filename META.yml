@@ -32,12 +32,11 @@ no_index:
 provides:
   Path::Iterator::Rule:
     file: lib/Path/Iterator/Rule.pm
-    version: 0.001
+    version: 0.002
 requires:
   Carp: 0
   Data::Clone: 0
   File::Basename: 0
-  IO::Dir: 0
   List::Util: 0
   Number::Compare: 0.02
   Scalar::Util: 0
@@ -53,4 +52,4 @@ resources:
   bugtracker: https://github.com/dagolden/path-iterator-rule/issues
   homepage: https://metacpan.org/release/Path-Iterator-Rule
   repository: git://github.com/dagolden/path-iterator-rule.git
-version: 0.001
+version: 0.002
