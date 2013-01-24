@@ -15,6 +15,7 @@ t/breadth-depth-files.t
 t/breadth-depth.t
 t/clone.t
 t/error_handler.t
+t/fast.t
 t/lib/PCNTest.pm
 t/logic.t
 t/min-max-depth.t

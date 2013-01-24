@@ -2,7 +2,7 @@ NAME
     Path::Iterator::Rule - Iterative, recursive file finder
 
 VERSION
-    version 0.003
+    version 0.004
 
 SYNOPSIS
       use Path::Iterator::Rule;
@@ -120,12 +120,22 @@ USAGE
     will have absolute paths. If these are relative, then the objects
     returned will have relative paths.
 
+   "iter_fast"
+    This works just like "iter", except that it optimizes for speed over
+    safety. Don't do this unless you're sure you need it and accept the
+    consequences. See "PERFORMANCE" for details.
+
    "all"
       my @matches = $rule->all( @dir, \%options );
 
     Returns a list of paths that match the rule. It takes the same arguments
     and has the same behaviors as the "iter" method. The "all" method uses
     "iter" internally to fetch all results.
+
+   "all_fast"
+    This works just like "all", except that it optimizes for speed over
+    safety. Don't do this unless you're sure you need it and accept the
+    consequences. See "PERFORMANCE" for details.
 
    "test"
       if ( $rule->test( $path ) ) { ... }
@@ -467,20 +477,26 @@ PERFORMANCE
     They ensure uniqueness, return files in sorted order, and throw nice
     error messages if something goes wrong.
 
-    If you want speed, set these options:
+    If you want speed over safety, set these options:
 
-        my %options = (
+        %options = (
             loop_safe => 0,
             sorted => 0,
+            depthfirst => -1,
             error_handler => undef
         );
 
-        my $iter = $rule->iter( @dirs, \%options );
+    Alternatively, use the "iter_fast" and "fast_all" methods instead, which
+    set these options for you.
 
-    Depending on the file structure being searched, you might also want to
-    set "depthfirst => 1". If you have lots of nested directories and all
-    the files at the bottom, a depth first search might do less work or use
-    less memory, particularly if the search will be halted early (e.g.
+        $iter = $rule->iter( @dirs, \%options );
+
+        $iter = $rule->iter_fast( @dirs ); # same thing
+
+    Depending on the file structure being searched, "depthfirst => -1" may
+    or may not be a good choice. If you have lots of nested directories and
+    all the files at the bottom, a depth first search might do less work or
+    use less memory, particularly if the search will be halted early (e.g.
     finding the first N matches.)
 
     Rules will shortcut on failure, so be sure to put rules likely to fail
