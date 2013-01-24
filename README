@@ -2,7 +2,7 @@ NAME
     Path::Iterator::Rule - Iterative, recursive file finder
 
 VERSION
-    version 0.006
+    version 0.007
 
 SYNOPSIS
       use Path::Iterator::Rule;
@@ -62,7 +62,7 @@ USAGE
 
    "clone"
       my $common      = Path::Iterator::Rule->new->file->not_empty;
-      my $big_files   = $common->clone->size(">1MB");
+      my $big_files   = $common->clone->size(">1M");
       my $small_files = $common->clone->size("<10K");
 
     Creates a copy of a rule object. Useful for customizing different rule
