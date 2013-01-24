@@ -1,5 +1,11 @@
 Revision history for Path-Iterator-Rule
 
+0.006     2013-01-23 21:54:31 America/New_York
+
+    [CHANGED]
+
+    - Even more internal optimization
+
 0.005     2013-01-23 19:55:57 America/New_York
 
     [FIXED]
