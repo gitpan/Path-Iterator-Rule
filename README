@@ -2,7 +2,7 @@ NAME
     Path::Iterator::Rule - Iterative, recursive file finder
 
 VERSION
-    version 0.007
+    version 0.008
 
 SYNOPSIS
       use Path::Iterator::Rule;
@@ -112,13 +112,13 @@ USAGE
 
     The "error_handler" parameter must be a subroutine reference. It will be
     called when a rule test throws an exception. The first argument will be
-    the Path::Class object being inspected and the second argument will be
-    the exception.
+    the file name being inspected and the second argument will be the
+    exception.
 
     The paths inspected and returned will be relative to the search
-    directories provided. If these are absolute, then the objects returned
-    will have absolute paths. If these are relative, then the objects
-    returned will have relative paths.
+    directories provided. If these are absolute, then the paths returned
+    will have absolute paths. If these are relative, then the paths returned
+    will have relative paths.
 
    "iter_fast"
     This works just like "iter", except that it optimizes for speed over
@@ -138,7 +138,7 @@ USAGE
     consequences. See "PERFORMANCE" for details.
 
    "test"
-      if ( $rule->test( $path ) ) { ... }
+      if ( $rule->test( $path, $basename, $stash ) ) { ... }
 
     Test a file path against a rule. Used internally, but provided should
     someone want to create their own, custom iteration algorithm.
@@ -336,9 +336,7 @@ RULE METHODS
       $rule->not_dangling;
 
     The "dangling" rule method matches dangling symlinks. Use it or its
-    inverse to control how dangling symlinks should be treated. Note that a
-    dangling symlink will be returned by the iterator as a Path::Class::File
-    object.
+    inverse to control how dangling symlinks should be treated.
 
    "shebang"
       $rule->shebang(qr/#!.*\bperl\b/);
@@ -359,7 +357,7 @@ RULE METHODS
 
 EXTENDING
   Custom rule subroutines
-    Rules are implemented as (usually anonymous) subroutines callbacks that
+    Rules are implemented as (usually anonymous) subroutine callbacks that
     return a value indicating whether or not the rule matches. These
     callbacks are called with three arguments. The first argument is a path,
     which is also locally aliased as the $_ global variable for convenience
@@ -460,13 +458,13 @@ EXTENDING
         basename, full path ] entries within it, excluding "." and ".."
 
     Note that "_children" should return a *list* of *tuples*, where the
-    tuples are basename and full path.
+    tuples are array references containing basename and full path.
 
     See Path::Class::Rule source for an example.
 
 LEXICAL WARNINGS
     If you run with lexical warnings enabled, "Path::Iterator::Rule" will
-    issue warnings in certain circumstances (such as a read-only directory
+    issue warnings in certain circumstances (such as an unreadable directory
     that must be skipped). To disable these categories, put the following
     statement at the correct scope:
 
@@ -539,6 +537,11 @@ SEE ALSO
     various features/deficiencies, depending on your preferences and needs.
     Here is an (incomplete) list of alternatives, with some comparison
     commentary.
+
+    Path::Class::Rule and IO::All::Rule are subclasses of
+    "Path::Iterator::Rule" and operate on Path::Class and IO::All objects,
+    respectively. Because of this, they are substantially slower on large
+    directory trees than just using this module directly.
 
     File::Find is part of the Perl core. It requires the user to write a
     callback function to process each node of the search. Callbacks must use
