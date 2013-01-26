@@ -1,5 +1,11 @@
 Revision history for Path-Iterator-Rule
 
+0.009     2013-01-25 21:52:41 America/New_York
+
+    [FIXED]
+
+    - Fixed tests on Windows
+
 0.008     2013-01-24 09:05:01 America/New_York
 
     [DOCUMENTED]
