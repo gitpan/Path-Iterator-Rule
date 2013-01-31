@@ -2,7 +2,7 @@ NAME
     Path::Iterator::Rule - Iterative, recursive file finder
 
 VERSION
-    version 0.009
+    version 0.010
 
 SYNOPSIS
       use Path::Iterator::Rule;
@@ -100,6 +100,9 @@ USAGE
     *   "sorted" -- Whether entries in a directory are sorted before
         processing. Default is 1.
 
+    *   "visitor" -- An optional coderef that will be called on items
+        matching all rules.
+
     Filesystem loops might exist from either hard or soft links. The
     "loop_safe" option prevents infinite loops, but adds some overhead by
     making "stat" calls. Because directories are visited only once when
@@ -114,6 +117,12 @@ USAGE
     called when a rule test throws an exception. The first argument will be
     the file name being inspected and the second argument will be the
     exception.
+
+    The optional "visitor" parameter must be a subroutine reference. If set,
+    it will be called for any result that matches. It is called the same way
+    a custom rule would be (see "EXTENDING") but its return value is
+    ignored. It is called when an item is first inspected -- "postorder" is
+    not respected.
 
     The paths inspected and returned will be relative to the search
     directories provided. If these are absolute, then the paths returned
@@ -131,6 +140,11 @@ USAGE
     Returns a list of paths that match the rule. It takes the same arguments
     and has the same behaviors as the "iter" method. The "all" method uses
     "iter" internally to fetch all results.
+
+    In void context, it is optimized to iterate over everything, but not
+    store results. This is most useful with the "visitor" option:
+
+        $rule->all( $path, { visitor => \&callback } );
 
    "all_fast"
     This works just like "all", except that it optimizes for speed over

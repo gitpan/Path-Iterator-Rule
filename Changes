@@ -1,5 +1,20 @@
 Revision history for Path-Iterator-Rule
 
+0.010     2013-01-31 15:56:17 America/New_York
+
+    [ADDED]
+
+    - Added a "visitor" option to pass results to a code reference
+      during iteration
+
+    [CHANGED]
+
+    - Calling all() in void context will iterate but not store results
+
+    [FIXED]
+
+    - Another attempt at fixing tests on Windows. Damn those backslashes!
+
 0.009     2013-01-25 21:52:41 America/New_York
 
     [FIXED]

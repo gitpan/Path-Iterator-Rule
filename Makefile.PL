@@ -18,8 +18,8 @@ my %WriteMakefileArgs = (
     "File::Temp" => 0,
     "File::pushd" => 0,
     "Path::Class" => 0,
+    "Path::Tiny" => 0,
     "Test::Deep" => 0,
-    "Test::Filename" => 0,
     "Test::More" => "0.92",
     "autodie" => 0
   },
@@ -45,7 +45,7 @@ my %WriteMakefileArgs = (
     "warnings" => 0,
     "warnings::register" => 0
   },
-  "VERSION" => "0.009",
+  "VERSION" => "0.010",
   "test" => {
     "TESTS" => "t/*.t"
   }

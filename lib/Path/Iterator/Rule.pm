@@ -4,7 +4,7 @@ use warnings;
 
 package Path::Iterator::Rule;
 # ABSTRACT: Iterative, recursive file finder
-our $VERSION = '0.009'; # VERSION
+our $VERSION = '0.010'; # VERSION
 
 # Register warnings category
 use warnings::register;
@@ -89,6 +89,7 @@ sub iter {
         sorted          => 1,
         loop_safe       => ( $^O eq 'MSWin32' ? 0 : 1 ),       # No inode #'s on Windows
         error_handler   => sub { die sprintf( "%s: %s", @_ ) },
+        visitor         => undef,
     );
     $self->_iter( \%defaults, @_ );
 }
@@ -101,6 +102,7 @@ sub iter_fast {
         sorted          => 0,
         loop_safe       => 0,
         error_handler   => undef,
+        visitor         => undef,
     );
     $self->_iter( \%defaults, @_ );
 }
@@ -120,6 +122,7 @@ sub _iter {
     my $opt_sorted          = $opts{sorted};
     my $opt_loop_safe       = $opts{loop_safe};
     my $opt_error_handler   = $opts{error_handler};
+    my $opt_visitor         = $opts{visitor};
     my $has_rules           = @{ $self->{rules} };
     my $stash               = {};
 
@@ -159,6 +162,13 @@ sub _iter {
                 $interest += 0;                           # then ignore "but true"
             }
 
+            # if we have a visitor, we call it like a custom rule
+            if ( $opt_visitor && $interest ) {
+                local $_ = $item;
+                $stash->{_depth} = $depth;
+                $opt_visitor->( $item, $base, $stash );
+            }
+
             # if it's a directory, maybe add children to the queue
             if (   -d $string_item
                 && !$prune
@@ -170,8 +180,8 @@ sub _iter {
                 else {
                     my @next;
                     my $depth_p1 = $depth + 1;
-                    if ( $can_children ) {
-                        my @paths = $can_children->($self, $item);
+                    if ($can_children) {
+                        my @paths = $can_children->( $self, $item );
                         if ($opt_sorted) {
                             @paths = sort { "$a->[0]" cmp "$b->[0]" } @paths;
                         }
@@ -180,13 +190,16 @@ sub _iter {
                     else {
                         opendir( my $dh, $string_item );
                         if ($opt_sorted) {
-                            @next= map { ("$string_item/$_", $_, $depth_p1) } sort { $a cmp $b } grep { $_ ne "." && $_ ne ".." } readdir $dh;
+                            @next =
+                              map { ( "$string_item/$_", $_, $depth_p1 ) }
+                              sort { $a cmp $b } grep { $_ ne "." && $_ ne ".." } readdir $dh;
                         }
                         else {
-                            @next= map { ("$string_item/$_", $_, $depth_p1) } grep { $_ ne "." && $_ ne ".." } readdir $dh;
+                            @next =
+                              map { ( "$string_item/$_", $_, $depth_p1 ) }
+                              grep { $_ ne "." && $_ ne ".." } readdir $dh;
                         }
                     }
-
 
                     if ($opt_depthfirst) {
                         # for postorder, requeue as reference to signal it can be returned
@@ -221,11 +234,16 @@ sub all_fast {
 sub _all {
     my $self = shift;
     my $iter = shift;
-    my @results;
-    while ( my $item = $iter->() ) {
-        push @results, $item;
+    if ( defined wantarray ) {
+        my @results;
+        while ( my $item = $iter->() ) {
+            push @results, $item;
+        }
+        return @results;
     }
-    return @results;
+    else {
+        1 while $iter->();
+    }
 }
 
 #--------------------------------------------------------------------------#
@@ -564,7 +582,7 @@ Path::Iterator::Rule - Iterative, recursive file finder
 
 =head1 VERSION
 
-version 0.009
+version 0.010
 
 =head1 SYNOPSIS
 
@@ -692,6 +710,10 @@ C<loop_safe> -- Prevents visiting the same directory more than once when true.  
 
 C<sorted> -- Whether entries in a directory are sorted before processing. Default is 1.
 
+=item *
+
+C<visitor> -- An optional coderef that will be called on items matching all rules.
+
 =back
 
 Filesystem loops might exist from either hard or soft links.  The C<loop_safe>
@@ -707,6 +729,11 @@ The C<error_handler> parameter must be a subroutine reference.  It will be
 called when a rule test throws an exception.  The first argument will be
 the file name being inspected and the second argument will be
 the exception.
+
+The optional C<visitor> parameter must be a subroutine reference.  If set,
+it will be called for any result that matches.  It is called the same way
+a custom rule would be (see L</EXTENDING>) but its return value is ignored.
+It is called when an item is first inspected -- "postorder" is not respected.
 
 The paths inspected and returned will be relative to the search directories
 provided.  If these are absolute, then the paths returned will have absolute
@@ -726,6 +753,11 @@ the consequences.  See L</PERFORMANCE> for details.
 Returns a list of paths that match the rule.  It takes the same arguments and
 has the same behaviors as the C<iter> method.  The C<all> method uses C<iter>
 internally to fetch all results.
+
+In void context, it is optimized to iterate over everything, but not store
+results.  This is most useful with the C<visitor> option:
+
+    $rule->all( $path, { visitor => \&callback } );
 
 =head3 C<all_fast>
 

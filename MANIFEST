@@ -25,6 +25,7 @@ t/stat_tests.t
 t/symlink.t
 t/unsorted.t
 t/vcs.t
+t/visitor.t
 t/x_tests.t
 xt/author/critic.t
 xt/author/pod-spell.t
