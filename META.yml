@@ -11,6 +11,7 @@ build_requires:
   Path::Class: 0
   Path::Tiny: 0
   Test::Deep: 0
+  Test::Filename: 0.03
   Test::More: 0.92
   autodie: 0
 configure_requires:
@@ -33,7 +34,7 @@ no_index:
 provides:
   Path::Iterator::Rule:
     file: lib/Path/Iterator/Rule.pm
-    version: 0.010
+    version: 0.011
 requires:
   Carp: 0
   Data::Clone: 0
@@ -53,4 +54,4 @@ resources:
   bugtracker: https://github.com/dagolden/path-iterator-rule/issues
   homepage: https://metacpan.org/release/Path-Iterator-Rule
   repository: git://github.com/dagolden/path-iterator-rule.git
-version: 0.010
+version: 0.011
