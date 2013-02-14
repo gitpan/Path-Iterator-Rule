@@ -14,7 +14,9 @@ my %WriteMakefileArgs = (
   "BUILD_REQUIRES" => {
     "Config" => 0,
     "Exporter" => 0,
+    "ExtUtils::MakeMaker" => 0,
     "File::Find" => 0,
+    "File::Spec::Functions" => 0,
     "File::Temp" => 0,
     "File::pushd" => 0,
     "Path::Class" => 0,
@@ -46,7 +48,7 @@ my %WriteMakefileArgs = (
     "warnings" => 0,
     "warnings::register" => 0
   },
-  "VERSION" => "0.011",
+  "VERSION" => "0.012",
   "test" => {
     "TESTS" => "t/*.t"
   }

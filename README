@@ -2,7 +2,7 @@ NAME
     Path::Iterator::Rule - Iterative, recursive file finder
 
 VERSION
-    version 0.011
+    version 0.012
 
 SYNOPSIS
       use Path::Iterator::Rule;
@@ -49,6 +49,9 @@ DESCRIPTION
     *   doesn't chdir during operation
 
     *   provides an API for extensions
+
+    As a convenience, the PIR module is an empty subclass of this one that
+    is less arduous to type for one-liners.
 
 USAGE
   Constructors

@@ -4,7 +4,7 @@ use warnings;
 
 package Path::Iterator::Rule;
 # ABSTRACT: Iterative, recursive file finder
-our $VERSION = '0.011'; # VERSION
+our $VERSION = '0.012'; # VERSION
 
 # Register warnings category
 use warnings::register;
@@ -582,7 +582,7 @@ Path::Iterator::Rule - Iterative, recursive file finder
 
 =head1 VERSION
 
-version 0.011
+version 0.012
 
 =head1 SYNOPSIS
 
@@ -649,6 +649,9 @@ doesn't chdir during operation
 provides an API for extensions
 
 =back
+
+As a convenience, the L<PIR> module is an empty subclass of this one
+that is less arduous to type for one-liners.
 
 =head1 USAGE
 
