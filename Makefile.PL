@@ -19,7 +19,6 @@ my %WriteMakefileArgs = (
     "File::Spec::Functions" => 0,
     "File::Temp" => 0,
     "File::pushd" => 0,
-    "Path::Class" => 0,
     "Path::Tiny" => 0,
     "Test::Deep" => 0,
     "Test::Filename" => "0.03",
@@ -37,6 +36,7 @@ my %WriteMakefileArgs = (
     "Carp" => 0,
     "Data::Clone" => 0,
     "File::Basename" => 0,
+    "File::Spec" => 0,
     "List::Util" => 0,
     "Number::Compare" => "0.02",
     "Scalar::Util" => 0,
@@ -48,7 +48,7 @@ my %WriteMakefileArgs = (
     "warnings" => 0,
     "warnings::register" => 0
   },
-  "VERSION" => "0.012",
+  "VERSION" => "0.013",
   "test" => {
     "TESTS" => "t/*.t"
   }

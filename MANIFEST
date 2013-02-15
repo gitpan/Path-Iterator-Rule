@@ -7,6 +7,7 @@ META.yml
 Makefile.PL
 README
 dist.ini
+examples/modules-in-inc.pl
 lib/PIR.pm
 lib/Path/Iterator/Rule.pm
 perlcritic.rc
@@ -24,6 +25,7 @@ t/min-max-depth.t
 t/names.t
 t/perl.t
 t/pir.t
+t/relative.t
 t/stat_tests.t
 t/symlink.t
 t/unsorted.t

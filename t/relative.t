@@ -3,6 +3,7 @@ use strict;
 use warnings;
 use Test::More 0.92;
 use File::Temp;
+use Path::Tiny;
 use Test::Deep qw/cmp_deeply/;
 use File::pushd qw/pushd/;
 
@@ -30,12 +31,12 @@ use Path::Iterator::Rule;
       gggg.txt
     );
 
-    my @breadth = qw(
+    my @depth_post = qw(
       aaaa.txt
       bbbb.txt
-      gggg.txt
       cccc/dddd.txt
       cccc/eeee/ffff.txt
+      gggg.txt
     );
 
     my $td = make_tree(@tree);
@@ -43,18 +44,14 @@ use Path::Iterator::Rule;
     my ( $iter, @files );
     my $rule = Path::Iterator::Rule->new->file;
 
-    $rule->all( $td,
-        { visitor => sub { push @files, unixify( $_, $td ) }, depthfirst => -1 } );
-
-    cmp_deeply( \@files, \@depth_pre, "Visitor (depth)" )
+    @files =
+      map { path($_)->stringify } $rule->all( { depthfirst => -1, relative => 1 }, $td );
+    cmp_deeply( \@files, \@depth_pre, "Depth first iteration (pre)" )
       or diag explain \@files;
 
-    @files = ();
-
-    $rule->all( $td,
-        { visitor => sub { push @files, unixify( $_, $td ) } } );
-
-    cmp_deeply( \@files, \@breadth, "Visitor (breadth)" )
+    @files =
+      map { path($_)->stringify } $rule->all( { depthfirst => 1, relative => 1 }, $td );
+    cmp_deeply( \@files, \@depth_post, "Depth first iteration (post)" )
       or diag explain \@files;
 
 }
@@ -69,4 +66,3 @@ done_testing;
 #
 #   The Apache License, Version 2.0, January 2004
 #
-

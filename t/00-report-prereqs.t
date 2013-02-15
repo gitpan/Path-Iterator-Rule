@@ -17,12 +17,12 @@ my @modules = qw(
   ExtUtils::MakeMaker
   File::Basename
   File::Find
+  File::Spec
   File::Spec::Functions
   File::Temp
   File::pushd
   List::Util
   Number::Compare
-  Path::Class
   Path::Tiny
   Scalar::Util
   Test::Deep

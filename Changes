@@ -1,5 +1,11 @@
 Revision history for Path-Iterator-Rule
 
+0.013     2013-02-15 10:51:59 America/New_York
+
+    [ADDED]
+
+    - Added 'relative' option to iterator
+
 0.012     2013-02-13 20:40:55 America/New_York
 
     [ADDED]

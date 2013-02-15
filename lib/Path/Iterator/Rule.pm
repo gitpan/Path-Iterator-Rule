@@ -4,7 +4,7 @@ use warnings;
 
 package Path::Iterator::Rule;
 # ABSTRACT: Iterative, recursive file finder
-our $VERSION = '0.012'; # VERSION
+our $VERSION = '0.013'; # VERSION
 
 # Register warnings category
 use warnings::register;
@@ -14,6 +14,7 @@ use re 'regexp_pattern';
 use Carp;
 use Data::Clone qw/data_clone/;
 use File::Basename qw/basename/;
+use File::Spec;
 use List::Util qw/first/;
 use Number::Compare 0.02;
 use Scalar::Util qw/blessed/;
@@ -122,6 +123,7 @@ sub _iter {
     my $opt_sorted          = $opts{sorted};
     my $opt_loop_safe       = $opts{loop_safe};
     my $opt_error_handler   = $opts{error_handler};
+    my $opt_relative        = $opts{relative};
     my $opt_visitor         = $opts{visitor};
     my $has_rules           = @{ $self->{rules} };
     my $stash               = {};
@@ -129,15 +131,15 @@ sub _iter {
     # if not subclassed, we want to inline
     my $can_children = $self->can("_children");
 
-    # queue structure: flat list in tuples of 3: (object, basename, depth)
+    # queue structure: flat list in tuples of 4: (object, basename, depth, origin)
     # if object is arrayref, then that's a special case signal that it
     # was already of interest and can finally be returned for postorder searches
     my @queue =
-      map { ( $self->_objectify($_), basename("$_"), 0 ) } @_ ? @_ : '.';
+      map { my $i = $self->_objectify($_); ( $i, basename("$_"), 0, $i ) } @_ ? @_ : '.';
 
     return sub {
         LOOP: {
-            my ( $item, $base, $depth ) = splice( @queue, 0, 3 );
+            my ( $item, $base, $depth, $origin ) = splice( @queue, 0, 4 );
             return unless $item;
             return $item->[0] if ref $item eq 'ARRAY'; # deferred for postorder
             my $string_item = "$item";
@@ -185,18 +187,18 @@ sub _iter {
                         if ($opt_sorted) {
                             @paths = sort { "$a->[0]" cmp "$b->[0]" } @paths;
                         }
-                        @next = map { ( $_->[1], $_->[0], $depth_p1 ) } @paths;
+                        @next = map { ( $_->[1], $_->[0], $depth_p1, $origin ) } @paths;
                     }
                     else {
                         opendir( my $dh, $string_item );
                         if ($opt_sorted) {
                             @next =
-                              map { ( "$string_item/$_", $_, $depth_p1 ) }
+                              map { ( "$string_item/$_", $_, $depth_p1, $origin ) }
                               sort { $a cmp $b } grep { $_ ne "." && $_ ne ".." } readdir $dh;
                         }
                         else {
                             @next =
-                              map { ( "$string_item/$_", $_, $depth_p1 ) }
+                              map { ( "$string_item/$_", $_, $depth_p1, $origin ) }
                               grep { $_ ne "." && $_ ne ".." } readdir $dh;
                         }
                     }
@@ -204,7 +206,7 @@ sub _iter {
                     if ($opt_depthfirst) {
                         # for postorder, requeue as reference to signal it can be returned
                         # without being retested
-                        push @next, [$item], $base, $depth
+                        push @next, [( $opt_relative ? File::Spec->abs2rel($item, $origin) : $item )], $base, $depth, $origin
                           if $interest && $opt_depthfirst > 0;
                         unshift @queue, @next;
                         redo LOOP if $opt_depthfirst > 0;
@@ -214,7 +216,7 @@ sub _iter {
                     }
                 }
             }
-            return $item
+            return ( $opt_relative ? File::Spec->abs2rel($item, $origin) : $item )
               if $interest;
             redo LOOP;
         }
@@ -582,7 +584,7 @@ Path::Iterator::Rule - Iterative, recursive file finder
 
 =head1 VERSION
 
-version 0.012
+version 0.013
 
 =head1 SYNOPSIS
 
@@ -711,6 +713,10 @@ C<loop_safe> -- Prevents visiting the same directory more than once when true.  
 
 =item *
 
+C<relative> -- Return matching items relative to the search directory. Default is 0.
+
+=item *
+
 C<sorted> -- Whether entries in a directory are sorted before processing. Default is 1.
 
 =item *
@@ -742,6 +748,13 @@ The paths inspected and returned will be relative to the search directories
 provided.  If these are absolute, then the paths returned will have absolute
 paths.  If these are relative, then the paths returned will have relative
 paths.
+
+If the search directories are absolute and the C<relative> option is true,
+files returned will be relative to the search directory.  Note that if the
+search directories are not mutually exclusive (whether containing
+subdirectories like C<@INC> or symbolic links), files found could be returned
+relative to different initial search directories based on C<depthfirst>,
+C<follow_symlinks> or C<loop_safe>.
 
 =head3 C<iter_fast>
 
