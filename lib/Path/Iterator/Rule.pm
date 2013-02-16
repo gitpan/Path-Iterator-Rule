@@ -4,7 +4,7 @@ use warnings;
 
 package Path::Iterator::Rule;
 # ABSTRACT: Iterative, recursive file finder
-our $VERSION = '0.013'; # VERSION
+our $VERSION = '0.014'; # VERSION
 
 # Register warnings category
 use warnings::register;
@@ -63,6 +63,7 @@ sub add_helper {
 #--------------------------------------------------------------------------#
 # Implementation-specific method; these may be overridden by subclasses
 # to test/return results of file wrappers like Path::Class or IO::All
+# or to provide custom error handler, visitors or other features
 #--------------------------------------------------------------------------#
 
 sub _objectify {
@@ -78,13 +79,13 @@ sub _objectify {
 ##    return map { [ $_, "$path/$_" ] } grep { $_ ne "." && $_ ne ".." } readdir $dh;
 ##}
 
-#--------------------------------------------------------------------------#
-# iteration methods
-#--------------------------------------------------------------------------#
+# The _stringify option controls whether the string form of an object is cached
+# for iteration control.  This is generally a good idea to avoid extra overhead,
+# but subclasses can override this if necessary
 
-sub iter {
-    my $self     = shift;
-    my %defaults = (
+sub _defaults {
+    return (
+        _stringify       => 1,
         follow_symlinks => 1,
         depthfirst      => 0,
         sorted          => 1,
@@ -92,12 +93,11 @@ sub iter {
         error_handler   => sub { die sprintf( "%s: %s", @_ ) },
         visitor         => undef,
     );
-    $self->_iter( \%defaults, @_ );
 }
 
-sub iter_fast {
-    my $self     = shift;
-    my %defaults = (
+sub _fast_defaults {
+    return (
+        _stringify       => 1,
         follow_symlinks => 1,
         depthfirst      => -1,
         sorted          => 0,
@@ -105,7 +105,20 @@ sub iter_fast {
         error_handler   => undef,
         visitor         => undef,
     );
-    $self->_iter( \%defaults, @_ );
+}
+
+#--------------------------------------------------------------------------#
+# iteration methods
+#--------------------------------------------------------------------------#
+
+sub iter {
+    my $self     = shift;
+    $self->_iter( { $self->_defaults }, @_ );
+}
+
+sub iter_fast {
+    my $self     = shift;
+    $self->_iter( { $self->_fast_defaults }, @_ );
 }
 
 sub _iter {
@@ -118,6 +131,7 @@ sub _iter {
     my %opts = ( %$defaults, %$args );
 
     # unroll these for efficiency
+    my $opt_stringify      = $opts{_stringify};
     my $opt_depthfirst      = $opts{depthfirst};
     my $opt_follow_symlinks = $opts{follow_symlinks};
     my $opt_sorted          = $opts{sorted};
@@ -142,7 +156,7 @@ sub _iter {
             my ( $item, $base, $depth, $origin ) = splice( @queue, 0, 4 );
             return unless $item;
             return $item->[0] if ref $item eq 'ARRAY'; # deferred for postorder
-            my $string_item = "$item";
+            my $string_item = $opt_stringify ? "$item" : $item;
             if ( !$opt_follow_symlinks ) {
                 redo LOOP if -l $string_item;
             }
@@ -376,8 +390,8 @@ sub _reflag {
 
 # "simple" helpers take no arguments
 my %simple_helpers = (
-    directory => sub { -d "$_" },             # see also -d => dir below
-    dangling => sub { -l "$_" && !stat "$_" },
+    directory => sub { -d $_ },             # see also -d => dir below
+    dangling => sub { -l $_ && !stat $_ },
 );
 
 while ( my ( $k, $v ) = each %simple_helpers ) {
@@ -432,8 +446,8 @@ my %complex_helpers = (
         my @patterns = map { _regexify($_) } @_;
         return sub {
             my $f = shift;
-            return unless !-d "$f";
-            open my $fh, "<", "$f";
+            return unless !-d $f;
+            open my $fh, "<", $f;
             my $shebang = <$fh>;
             return unless defined $shebang;
             return ( first { $shebang =~ $_ } @patterns ) ? 1 : 0;
@@ -451,7 +465,7 @@ __PACKAGE__->add_helper(
         Carp::croak("No patterns provided to 'skip_dirs'") unless @_;
         my $name_check = Path::Iterator::Rule->new->name(@_);
         return sub {
-            return "0 but true" if -d "$_[0]" && $name_check->test(@_);
+            return "0 but true" if -d $_[0] && $name_check->test(@_);
             return 1; # otherwise, like a null rule
           }
       } => 1 # don't create not_skip_dirs
@@ -480,14 +494,14 @@ my %X_tests = (
 #>>>
 
 while ( my ( $op, $name ) = each %X_tests ) {
-    my $coderef = eval "sub { $op qq{\$_} }"; ## no critic
+    my $coderef = eval "sub { $op \$_ }"; ## no critic
     __PACKAGE__->add_helper( $name, sub { return $coderef } );
 }
 
 my %time_tests = ( -A => accessed => -M => modified => -C => changed => );
 
 while ( my ( $op, $name ) = each %time_tests ) {
-    my $filetest = eval "sub { $op qq{\$_} }"; ## no critic
+    my $filetest = eval "sub { $op \$_ }"; ## no critic
     my $coderef  = sub {
         Carp::croak("The '$name' test requires a single argument") unless @_ == 1;
         my $comparator = Number::Compare->new(shift);
@@ -506,7 +520,7 @@ for my $i ( 0 .. $#stat_tests ) {
     my $coderef = sub {
         Carp::croak("The '$name' test requires a single argument") unless @_ == 1;
         my $comparator = Number::Compare->new(shift);
-        return sub { return $comparator->( ( stat("$_") )[$i] ) };
+        return sub { return $comparator->( ( stat($_) )[$i] ) };
     };
     __PACKAGE__->add_helper( $name, $coderef );
 }
@@ -584,7 +598,7 @@ Path::Iterator::Rule - Iterative, recursive file finder
 
 =head1 VERSION
 
-version 0.013
+version 0.014
 
 =head1 SYNOPSIS
 

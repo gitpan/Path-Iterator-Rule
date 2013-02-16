@@ -20,6 +20,7 @@ t/clone.t
 t/error_handler.t
 t/fast.t
 t/lib/PCNTest.pm
+t/lib/PIRTiny.pm
 t/logic.t
 t/min-max-depth.t
 t/names.t
@@ -27,6 +28,7 @@ t/perl.t
 t/pir.t
 t/relative.t
 t/stat_tests.t
+t/stringify.t
 t/symlink.t
 t/unsorted.t
 t/vcs.t

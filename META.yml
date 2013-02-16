@@ -35,10 +35,10 @@ no_index:
 provides:
   PIR:
     file: lib/PIR.pm
-    version: 0.013
+    version: 0.014
   Path::Iterator::Rule:
     file: lib/Path/Iterator/Rule.pm
-    version: 0.013
+    version: 0.014
 requires:
   Carp: 0
   Data::Clone: 0
@@ -59,4 +59,4 @@ resources:
   bugtracker: https://github.com/dagolden/path-iterator-rule/issues
   homepage: https://metacpan.org/release/Path-Iterator-Rule
   repository: git://github.com/dagolden/path-iterator-rule.git
-version: 0.013
+version: 0.014
