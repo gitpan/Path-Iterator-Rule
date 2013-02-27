@@ -4,7 +4,7 @@ use warnings;
 
 package Path::Iterator::Rule;
 # ABSTRACT: Iterative, recursive file finder
-our $VERSION = '0.014'; # VERSION
+our $VERSION = '1.000'; # VERSION
 
 # Register warnings category
 use warnings::register;
@@ -29,7 +29,8 @@ use namespace::clean;
 
 sub new {
     my $class = shift;
-    return bless { rules => [] }, ref $class || $class;
+    $class = ref $class if ref $class;
+    return bless { rules => [] }, $class;
 }
 
 sub clone {
@@ -39,7 +40,7 @@ sub clone {
 
 sub add_helper {
     my ( $class, $name, $coderef, $skip_negation ) = @_;
-    $class = ref $class || $class;
+    $class = ref $class if ref $class;
     if ( !$class->can($name) ) {
         no strict 'refs'; ## no critic
         *$name = sub {
@@ -56,7 +57,7 @@ sub add_helper {
         }
     }
     else {
-        Carp::carp("Can't add rule '$name' because it conflicts with an existing method");
+        Carp::croak("Can't add rule '$name' because it conflicts with an existing method");
     }
 }
 
@@ -85,7 +86,7 @@ sub _objectify {
 
 sub _defaults {
     return (
-        _stringify       => 1,
+        _stringify      => 1,
         follow_symlinks => 1,
         depthfirst      => 0,
         sorted          => 1,
@@ -97,7 +98,7 @@ sub _defaults {
 
 sub _fast_defaults {
     return (
-        _stringify       => 1,
+        _stringify      => 1,
         follow_symlinks => 1,
         depthfirst      => -1,
         sorted          => 0,
@@ -112,12 +113,12 @@ sub _fast_defaults {
 #--------------------------------------------------------------------------#
 
 sub iter {
-    my $self     = shift;
+    my $self = shift;
     $self->_iter( { $self->_defaults }, @_ );
 }
 
 sub iter_fast {
-    my $self     = shift;
+    my $self = shift;
     $self->_iter( { $self->_fast_defaults }, @_ );
 }
 
@@ -131,7 +132,7 @@ sub _iter {
     my %opts = ( %$defaults, %$args );
 
     # unroll these for efficiency
-    my $opt_stringify      = $opts{_stringify};
+    my $opt_stringify       = $opts{_stringify};
     my $opt_depthfirst      = $opts{depthfirst};
     my $opt_follow_symlinks = $opts{follow_symlinks};
     my $opt_sorted          = $opts{sorted};
@@ -174,8 +175,13 @@ sub _iter {
                 else {
                     $interest = $self->test( $item, $base, $stash );
                 }
-                $prune = $interest && !( 0 + $interest ); # capture "0 but true"
-                $interest += 0;                           # then ignore "but true"
+                # New way to signal prune is returning a reference to a scalar.
+                # Value of the scalar indicates if it should be returned by the
+                # iterator or not
+                if ( ref $interest eq 'SCALAR' ) {
+                    $prune    = 1;
+                    $interest = $$interest;
+                }
             }
 
             # if we have a visitor, we call it like a custom rule
@@ -186,8 +192,8 @@ sub _iter {
             }
 
             # if it's a directory, maybe add children to the queue
-            if (   -d $string_item
-                && !$prune
+            if (   ( -d $string_item )
+                && ( !$prune )
                 && ( !$opt_loop_safe || $self->_is_unique( $string_item, $stash ) ) )
             {
                 if ( !-r $string_item ) {
@@ -220,7 +226,8 @@ sub _iter {
                     if ($opt_depthfirst) {
                         # for postorder, requeue as reference to signal it can be returned
                         # without being retested
-                        push @next, [( $opt_relative ? File::Spec->abs2rel($item, $origin) : $item )], $base, $depth, $origin
+                        push @next, [ ( $opt_relative ? File::Spec->abs2rel( $item, $origin ) : $item ) ],
+                          $base, $depth, $origin
                           if $interest && $opt_depthfirst > 0;
                         unshift @queue, @next;
                         redo LOOP if $opt_depthfirst > 0;
@@ -230,7 +237,7 @@ sub _iter {
                     }
                 }
             }
-            return ( $opt_relative ? File::Spec->abs2rel($item, $origin) : $item )
+            return ( $opt_relative ? File::Spec->abs2rel( $item, $origin ) : $item )
               if $interest;
             redo LOOP;
         }
@@ -268,55 +275,80 @@ sub _all {
 
 sub and {
     my $self = shift;
-    push @{ $self->{rules} }, $self->_rulify( "and", @_ );
+    push @{ $self->{rules} }, $self->_rulify(@_);
     return $self;
 }
 
 sub or {
     my $self    = shift;
-    my @rules   = $self->_rulify( "or", @_ );
+    my @rules   = $self->_rulify(@_);
     my $coderef = sub {
-        my $result;
+        my ( $result, $prune );
         for my $rule (@rules) {
-            $result = $rule->(@_) || 0;
-            return $result if $result; # want to shortcut on "0 but true"
+            $result = $rule->(@_);
+            # once any rule says to prune, we remember that
+            $prune ||= ref($result) eq 'SCALAR';
+            # extract whether contraint was met
+            $result = $$result if ref($result) eq 'SCALAR';
+            # shortcut if met, propagating prune state
+            return ( $prune ? \1 : 1 ) if $result;
         }
-        return $result;
+        return ( $prune ? \$result : $result )
+          ; # may or may not be met, but propagate prune state
     };
     return $self->and($coderef);
 }
 
 sub not {
     my $self    = shift;
-    my @rules   = $self->_rulify( "not", @_ );
-    my $obj     = $self->new->and(@rules);
+    my $obj     = $self->new->and(@_);
     my $coderef = sub {
         my $result = $obj->test(@_);
-        # XXX what to do about "0 but true"? Ignore it?
-        return $result ? "0" : "1";
+        return ref($result) ? \!$$result : !$result; # invert, but preserve prune
     };
     return $self->and($coderef);
 }
 
 sub skip {
     my $self    = shift;
-    my @rules   = $self->_rulify( "not", @_ );
+    my @rules   = @_;
     my $obj     = $self->new->or(@rules);
     my $coderef = sub {
         my $result = $obj->test(@_);
-        return $result ? "0 but true" : "1";
+        my ($prune, $interest);
+        if ( ref($result) eq 'SCALAR' ) {
+            # test told us to prune, so make that sticky
+            # and also skip it
+            $prune = 1;
+            $interest = 0;
+        }
+        else {
+            # prune if test was true
+            $prune = $result;
+            # negate test result
+            $interest = !$result;
+        }
+        return $prune ? \$interest : $interest;
     };
     return $self->and($coderef);
 }
 
 sub test {
     my ( $self, $item, $base, $stash ) = @_;
-    my $result;
+    my ( $result, $prune );
     for my $rule ( @{ $self->{rules} } ) {
         $result = $rule->( $item, $base, $stash ) || 0;
-        return $result if !( 0 + $result ); # want to shortcut on "0 but true"
+        if ( ! ref($result) && $result eq '0 but true' ) {
+            Carp::croak( "0 but true no longer supported by custom rules" );
+        }
+        # once any rule says to prune, we remember that
+        $prune ||= ref($result) eq 'SCALAR';
+        # extract whether contraint was met
+        $result = $$result if ref($result) eq 'SCALAR';
+        # shortcut if not met, propagating prune state
+        return ( $prune ? \0 : 0 ) if !$result;
     }
-    return $result // 1;                    # not defined means we had no rules
+    return ( $prune ? \1 : 1 ); # all constaints met, but propagate prune state
 }
 
 #--------------------------------------------------------------------------#
@@ -324,7 +356,7 @@ sub test {
 #--------------------------------------------------------------------------#
 
 sub _rulify {
-    my ( $self, $method, @args ) = @_;
+    my ( $self, @args ) = @_;
     my @rules;
     for my $arg (@args) {
         my $rule;
@@ -335,7 +367,7 @@ sub _rulify {
             $rule = $arg;
         }
         else {
-            Carp::croak("Argument to ->and() must be coderef or Path::Iterator::Rule");
+            Carp::croak("Rules must be coderef or Path::Iterator::Rule");
         }
         push @rules, $rule;
     }
@@ -390,7 +422,7 @@ sub _reflag {
 
 # "simple" helpers take no arguments
 my %simple_helpers = (
-    directory => sub { -d $_ },             # see also -d => dir below
+    directory => sub { -d $_ },           # see also -d => dir below
     dangling => sub { -l $_ && !stat $_ },
 );
 
@@ -438,7 +470,9 @@ my %complex_helpers = (
         my $max_depth = 0 + shift; # if this warns, do here and not on every file
         return sub {
             my ( $f, $b, $stash ) = @_;
-            return $stash->{_depth} <= $max_depth ? 1 : "0 but true"; # prune
+            return 1  if $stash->{_depth} < $max_depth;
+            return \1 if $stash->{_depth} == $max_depth;
+            return \0;
           }
     },
     shebang => sub {
@@ -465,7 +499,19 @@ __PACKAGE__->add_helper(
         Carp::croak("No patterns provided to 'skip_dirs'") unless @_;
         my $name_check = Path::Iterator::Rule->new->name(@_);
         return sub {
-            return "0 but true" if -d $_[0] && $name_check->test(@_);
+            return \0 if -d $_[0] && $name_check->test(@_);
+            return 1; # otherwise, like a null rule
+          }
+      } => 1 # don't create not_skip_dirs
+);
+
+__PACKAGE__->add_helper(
+    skip_subdirs => sub {
+        Carp::croak("No patterns provided to 'skip_subdirs'") unless @_;
+        my $name_check = Path::Iterator::Rule->new->name(@_);
+        return sub {
+            my ( $f, $b, $stash ) = @_;
+            return \0 if -d $f && $stash->{_depth} && $name_check->test(@_);
             return 1; # otherwise, like a null rule
           }
       } => 1 # don't create not_skip_dirs
@@ -598,7 +644,7 @@ Path::Iterator::Rule - Iterative, recursive file finder
 
 =head1 VERSION
 
-version 0.014
+version 1.000
 
 =head1 SYNOPSIS
 
@@ -844,9 +890,12 @@ object to allow method chaining.
   );
 
 Takes one or more alternatives and will prune a directory if any of the
-criteria match.  For files, it is equivalent to
-C<< $rule->not($rule->or(@rules)) >>.  Returns the object to allow method
-chaining.
+criteria match or if any of the rules already indicate the directory should be
+pruned.  Pruning means the directory will not be returned by the iterator and
+will not be searched.
+
+For files, it is equivalent to C<< $rule->not($rule->or(@rules)) >>.  Returns
+the object to allow method chaining.
 
 This method should be called as early as possible in the rule chain.
 See L</skip_dirs> below for further explanation and an example.
@@ -883,7 +932,8 @@ case-insensitively.
 The C<skip_dirs> method skips directories that match one or more patterns.
 Patterns may be regular expressions or globs (just like C<name>).  Directories
 that match will not be returned from the iterator and will be excluded from
-further search.
+further search.  B<This includes the starting directories.>  If that isn't
+what you want, see L</skip_subdirs> instead.
 
 B<Note:> this rule should be specified early so that it has a chance to
 operate before a logical shortcut.  E.g.
@@ -893,6 +943,14 @@ operate before a logical shortcut.  E.g.
 
 In the latter case, when a ".git" directory is seen, the C<file> rule
 shortcuts the rule before the C<skip_dirs> rule has a chance to act.
+
+=head3 C<skip_subdirs>
+
+  $rule->skip_subdirs( @patterns );
+
+This works just like C<skip_dirs>, except that the starting directories
+(depth 0) are not skipped and may be returned from the iterator
+unless excluded by other rules.
 
 =head2 File test rules
 
@@ -965,9 +1023,10 @@ For example:
   $rule->min_depth(3);
   $rule->max_depth(5);
 
-The C<min_depth> and C<max_depth> rule methods take a single argument
-and limit the paths returned to a minimum or maximum depth (respectively)
-from the starting search directory.
+The C<min_depth> and C<max_depth> rule methods take a single argument and limit
+the paths returned to a minimum or maximum depth (respectively) from the
+starting search directory.  A depth of 0 means the starting directory itself.
+A depth of 1 means its children.  (This is similar to the Unix C<find> utility.)
 
 =head2 Perl file rules
 
@@ -976,7 +1035,7 @@ from the starting search directory.
 
   # Individual perl file rules
   $rule->perl_module;     # .pm files
-  $rule->perl_pod;        # .pod files 
+  $rule->perl_pod;        # .pod files
   $rule->perl_test;       # .t files
   $rule->perl_installer;  # Makefile.PL or Build.PL
   $rule->perl_script;     # .pl or 'perl' in the shebang
@@ -1053,7 +1112,7 @@ to provide additional data about the search in progress.
 For example, the C<_depth> key is used to support minimum and maximum
 depth checks.
 
-The custom rule subroutine must return one of three values:
+The custom rule subroutine must return one of four values:
 
 =over 4
 
@@ -1067,31 +1126,57 @@ A false value -- indicates the constraint is not satisfied
 
 =item *
 
-"0 but true" -- a special return value that signals that a directory should not be searched recursively
+C<\1> -- indicate the constraint is satisfied, and prune if it's a directory
+
+=item *
+
+C<\0> -- indicate the constraint is not satisfied, and prune if it's a directory
 
 =back
 
-The C<0 but true> value will shortcut logic (it is treated as "true" for an
-"or" rule and "false" for an "and" rule).  For a directory, it ensures that the
-directory will not be returned from the iterator and that its children will not
-be evaluated either.  It has no effect on files -- it is equivalent to
-returning a false value.
+A reference is a special flag that signals that a directory should not be
+searched recursively, regardless of whether the directory should be
+returned by the iterator or not.
 
-For example, this is equivalent to the "max_depth" rule method with
+The legacy "0 but true" value used previously for pruning is no longer valid
+and will throw an exception if it is detected.
+
+Here is an example.  This is equivalent to the "max_depth" rule method with
 a depth of 3:
 
   $rule->and(
     sub {
       my ($path, $basename, $stash) = @_;
-      return $stash->{_depth} <= 3 ? 1 : "0 but true";
+      return 1 if $stash->{_depth} < 3;
+      return \1 if $stash->{_depth} == 3;
+      return \0; # should never get here
     }
   );
 
-Files of depth 4 will not be returned by the iterator; directories of depth
-4 will not be returned and will not be searched.
+Files and directories and directories up to depth 3 will be returned and
+directories will be searched.  Files of depth 3 will be returned. Directories
+of depth 3 will be returned, but their contents will not be added to the
+search.
+
+Returning a reference is "sticky" -- they will propagate through "and" and "or"
+logic.
+
+    0 && \0 = \0    \0 && 0 = \0    0 || \0 = \0    \0 || 0 = \0
+    0 && \1 = \0    \0 && 1 = \0    0 || \1 = \1    \0 || 1 = \1
+    1 && \0 = \0    \1 && 0 = \0    1 || \0 = \1    \1 || 0 = \1
+    1 && \1 = \1    \1 && 1 = \1    1 || \1 = \1    \1 || 1 = \1
+
+Once a directory is flagged to be pruned, it will be pruned regardless of
+subsequent rules.
+
+    $rule->max_depth(3)->name(qr/foo/);
+
+This will return files or directories with "foo" in the name, but all
+directories at depth 3 will be pruned, regardless of whether they match the
+name rule.
 
 Generally, if you want to do directory pruning, you are encouraged to use the
-L</skip> method instead of writing your own logic using C<0 but true>.
+L</skip> method instead of writing your own logic using C<\0> and C<\1>.
 
 =head2 Extension modules and custom rule methods
 

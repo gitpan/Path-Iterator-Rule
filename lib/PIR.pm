@@ -4,7 +4,7 @@ use warnings;
 
 package PIR;
 # ABSTRACT: Short alias for Path::Iterator::Rule
-our $VERSION = '0.014'; # VERSION
+our $VERSION = '1.000'; # VERSION
 
 # Dependencies
 use Path::Iterator::Rule;
@@ -25,7 +25,7 @@ PIR - Short alias for Path::Iterator::Rule
 
 =head1 VERSION
 
-version 0.014
+version 1.000
 
 =head1 SYNOPSIS
 
@@ -229,9 +229,12 @@ object to allow method chaining.
   );
 
 Takes one or more alternatives and will prune a directory if any of the
-criteria match.  For files, it is equivalent to
-C<< $rule->not($rule->or(@rules)) >>.  Returns the object to allow method
-chaining.
+criteria match or if any of the rules already indicate the directory should be
+pruned.  Pruning means the directory will not be returned by the iterator and
+will not be searched.
+
+For files, it is equivalent to C<< $rule->not($rule->or(@rules)) >>.  Returns
+the object to allow method chaining.
 
 This method should be called as early as possible in the rule chain.
 See L</skip_dirs> below for further explanation and an example.
@@ -268,7 +271,8 @@ case-insensitively.
 The C<skip_dirs> method skips directories that match one or more patterns.
 Patterns may be regular expressions or globs (just like C<name>).  Directories
 that match will not be returned from the iterator and will be excluded from
-further search.
+further search.  B<This includes the starting directories.>  If that isn't
+what you want, see L</skip_subdirs> instead.
 
 B<Note:> this rule should be specified early so that it has a chance to
 operate before a logical shortcut.  E.g.
@@ -278,6 +282,14 @@ operate before a logical shortcut.  E.g.
 
 In the latter case, when a ".git" directory is seen, the C<file> rule
 shortcuts the rule before the C<skip_dirs> rule has a chance to act.
+
+=head3 C<skip_subdirs>
+
+  $rule->skip_subdirs( @patterns );
+
+This works just like C<skip_dirs>, except that the starting directories
+(depth 0) are not skipped and may be returned from the iterator
+unless excluded by other rules.
 
 =head2 File test rules
 
@@ -350,9 +362,10 @@ For example:
   $rule->min_depth(3);
   $rule->max_depth(5);
 
-The C<min_depth> and C<max_depth> rule methods take a single argument
-and limit the paths returned to a minimum or maximum depth (respectively)
-from the starting search directory.
+The C<min_depth> and C<max_depth> rule methods take a single argument and limit
+the paths returned to a minimum or maximum depth (respectively) from the
+starting search directory.  A depth of 0 means the starting directory itself.
+A depth of 1 means its children.  (This is similar to the Unix C<find> utility.)
 
 =head2 Perl file rules
 
@@ -361,7 +374,7 @@ from the starting search directory.
 
   # Individual perl file rules
   $rule->perl_module;     # .pm files
-  $rule->perl_pod;        # .pod files 
+  $rule->perl_pod;        # .pod files
   $rule->perl_test;       # .t files
   $rule->perl_installer;  # Makefile.PL or Build.PL
   $rule->perl_script;     # .pl or 'perl' in the shebang
@@ -438,7 +451,7 @@ to provide additional data about the search in progress.
 For example, the C<_depth> key is used to support minimum and maximum
 depth checks.
 
-The custom rule subroutine must return one of three values:
+The custom rule subroutine must return one of four values:
 
 =over 4
 
@@ -452,31 +465,57 @@ A false value -- indicates the constraint is not satisfied
 
 =item *
 
-"0 but true" -- a special return value that signals that a directory should not be searched recursively
+C<\1> -- indicate the constraint is satisfied, and prune if it's a directory
+
+=item *
+
+C<\0> -- indicate the constraint is not satisfied, and prune if it's a directory
 
 =back
 
-The C<0 but true> value will shortcut logic (it is treated as "true" for an
-"or" rule and "false" for an "and" rule).  For a directory, it ensures that the
-directory will not be returned from the iterator and that its children will not
-be evaluated either.  It has no effect on files -- it is equivalent to
-returning a false value.
+A reference is a special flag that signals that a directory should not be
+searched recursively, regardless of whether the directory should be
+returned by the iterator or not.
 
-For example, this is equivalent to the "max_depth" rule method with
+The legacy "0 but true" value used previously for pruning is no longer valid
+and will throw an exception if it is detected.
+
+Here is an example.  This is equivalent to the "max_depth" rule method with
 a depth of 3:
 
   $rule->and(
     sub {
       my ($path, $basename, $stash) = @_;
-      return $stash->{_depth} <= 3 ? 1 : "0 but true";
+      return 1 if $stash->{_depth} < 3;
+      return \1 if $stash->{_depth} == 3;
+      return \0; # should never get here
     }
   );
 
-Files of depth 4 will not be returned by the iterator; directories of depth
-4 will not be returned and will not be searched.
+Files and directories and directories up to depth 3 will be returned and
+directories will be searched.  Files of depth 3 will be returned. Directories
+of depth 3 will be returned, but their contents will not be added to the
+search.
+
+Returning a reference is "sticky" -- they will propagate through "and" and "or"
+logic.
+
+    0 && \0 = \0    \0 && 0 = \0    0 || \0 = \0    \0 || 0 = \0
+    0 && \1 = \0    \0 && 1 = \0    0 || \1 = \1    \0 || 1 = \1
+    1 && \0 = \0    \1 && 0 = \0    1 || \0 = \1    \1 || 0 = \1
+    1 && \1 = \1    \1 && 1 = \1    1 || \1 = \1    \1 || 1 = \1
+
+Once a directory is flagged to be pruned, it will be pruned regardless of
+subsequent rules.
+
+    $rule->max_depth(3)->name(qr/foo/);
+
+This will return files or directories with "foo" in the name, but all
+directories at depth 3 will be pruned, regardless of whether they match the
+name rule.
 
 Generally, if you want to do directory pruning, you are encouraged to use the
-L</skip> method instead of writing your own logic using C<0 but true>.
+L</skip> method instead of writing your own logic using C<\0> and C<\1>.
 
 =head2 Extension modules and custom rule methods
 

@@ -19,6 +19,7 @@ t/breadth-depth.t
 t/clone.t
 t/error_handler.t
 t/fast.t
+t/helpers.t
 t/lib/PCNTest.pm
 t/lib/PIRTiny.pm
 t/logic.t
