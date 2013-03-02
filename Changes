@@ -1,5 +1,12 @@
 Revision history for Path-Iterator-Rule
 
+1.001     2013-03-02 08:50:25 America/New_York
+
+    [FIXED]
+
+    - A test unintentionally required 5.12; this has been fixed and 5.10 is
+      the minimum Perl once again
+
 1.000     2013-02-27 15:25:47 America/New_York
 
     [INCOMPATIBLE CHANGES]
