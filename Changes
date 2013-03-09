@@ -1,5 +1,11 @@
 Revision history for Path-Iterator-Rule
 
+1.002     2013-03-08 22:35:51 America/New_York
+
+    [FIXED]
+
+    - Returning relative results now works with subclasses
+
 1.001     2013-03-02 08:50:25 America/New_York
 
     [FIXED]
