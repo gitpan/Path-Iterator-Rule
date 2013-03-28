@@ -4,7 +4,7 @@ use warnings;
 
 package PIR;
 # ABSTRACT: Short alias for Path::Iterator::Rule
-our $VERSION = '1.003'; # VERSION
+our $VERSION = '1.004'; # VERSION
 
 # Dependencies
 use Path::Iterator::Rule;
@@ -19,13 +19,15 @@ __END__
 
 =pod
 
+=encoding utf-8
+
 =head1 NAME
 
 PIR - Short alias for Path::Iterator::Rule
 
 =head1 VERSION
 
-version 1.003
+version 1.004
 
 =head1 SYNOPSIS
 
@@ -399,6 +401,42 @@ Skips files and/or prunes directories related to a version control system.
 Just like C<skip_dirs>, these rules should be specified early to get the
 correct behavior.
 
+=head2 File content rules
+
+=head3 C<contents_match>
+
+  $rule->contents_match(qr/BEGIN .* END/xs);
+
+The C<contents_match> rule takes a list of regular expressions and returns
+files that match one of the expressions.
+
+The expressions are applied to the file's contents as a single string. For
+large files, this is likely to take significant time and memory.
+
+Files are assumed to be encoded in UTF-8, but alternative Perl IO layers can
+be passed as the first argument:
+
+  $rule->contents_match(":encoding(iso-8859-1)", qr/BEGIN .* END/xs);
+
+See L<perlio> for further details.
+
+=head3 C<line_match>
+
+  $rule->line_match(qr/^new/i, qr/^Addition/);
+
+The C<line_match> rule takes a list of regular expressions and returns
+files with at least one line that matches one of the expressions.
+
+Files are assumed to be encoded in UTF-8, but alternative Perl IO layers can
+be passed as the first argument.
+
+=head3 C<shebang>
+
+  $rule->shebang(qr/#!.*\bperl\b/);
+
+The C<shebang> rule takes a list of regular expressions or glob patterns and
+checks them against the first line of a file.
+
 =head2 Other rules
 
 =head3 C<dangling>
@@ -408,13 +446,6 @@ correct behavior.
 
 The C<dangling> rule method matches dangling symlinks.  Use it or its inverse
 to control how dangling symlinks should be treated.
-
-=head3 C<shebang>
-
-  $rule->shebang(qr/#!.*\bperl\b/);
-
-The C<shebang> rule takes a list of regular expressions or glob patterns and
-checks them against the first line of a file.
 
 =head2 Negated rules
 
@@ -746,9 +777,19 @@ See L<the speed of Perl file finders|http://rjbs.manxome.org/rubric/entry/1981>
 
 David Golden <dagolden@cpan.org>
 
-=head1 CONTRIBUTOR
+=head1 CONTRIBUTORS
 
-Graham Knop <haarg@haarg.org>
+=over 4
+
+=item *
+
+Graham Knop <haarg@cpan.org>
+
+=item *
+
+Toby Inkster <tobyink@cpan.org>
+
+=back
 
 =head1 COPYRIGHT AND LICENSE
 

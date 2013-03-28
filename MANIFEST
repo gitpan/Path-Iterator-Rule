@@ -17,6 +17,7 @@ t/basic.t
 t/breadth-depth-files.t
 t/breadth-depth.t
 t/clone.t
+t/content.t
 t/error_handler.t
 t/fast.t
 t/helpers.t

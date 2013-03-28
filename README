@@ -2,7 +2,7 @@ NAME
     Path::Iterator::Rule - Iterative, recursive file finder
 
 VERSION
-    version 1.003
+    version 1.004
 
 SYNOPSIS
       use Path::Iterator::Rule;
@@ -370,6 +370,38 @@ RULE METHODS
     system. Just like "skip_dirs", these rules should be specified early to
     get the correct behavior.
 
+  File content rules
+   "contents_match"
+      $rule->contents_match(qr/BEGIN .* END/xs);
+
+    The "contents_match" rule takes a list of regular expressions and
+    returns files that match one of the expressions.
+
+    The expressions are applied to the file's contents as a single string.
+    For large files, this is likely to take significant time and memory.
+
+    Files are assumed to be encoded in UTF-8, but alternative Perl IO layers
+    can be passed as the first argument:
+
+      $rule->contents_match(":encoding(iso-8859-1)", qr/BEGIN .* END/xs);
+
+    See perlio for further details.
+
+   "line_match"
+      $rule->line_match(qr/^new/i, qr/^Addition/);
+
+    The "line_match" rule takes a list of regular expressions and returns
+    files with at least one line that matches one of the expressions.
+
+    Files are assumed to be encoded in UTF-8, but alternative Perl IO layers
+    can be passed as the first argument.
+
+   "shebang"
+      $rule->shebang(qr/#!.*\bperl\b/);
+
+    The "shebang" rule takes a list of regular expressions or glob patterns
+    and checks them against the first line of a file.
+
   Other rules
    "dangling"
       $rule->symlink->dangling;
@@ -377,12 +409,6 @@ RULE METHODS
 
     The "dangling" rule method matches dangling symlinks. Use it or its
     inverse to control how dangling symlinks should be treated.
-
-   "shebang"
-      $rule->shebang(qr/#!.*\bperl\b/);
-
-    The "shebang" rule takes a list of regular expressions or glob patterns
-    and checks them against the first line of a file.
 
   Negated rules
     Most rule methods have a negated form preceded by "not_".
@@ -690,8 +716,10 @@ SUPPORT
 AUTHOR
     David Golden <dagolden@cpan.org>
 
-CONTRIBUTOR
-    Graham Knop <haarg@haarg.org>
+CONTRIBUTORS
+    *   Graham Knop <haarg@cpan.org>
+
+    *   Toby Inkster <tobyink@cpan.org>
 
 COPYRIGHT AND LICENSE
     This software is Copyright (c) 2013 by David Golden.
