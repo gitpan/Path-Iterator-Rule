@@ -4,7 +4,7 @@ use warnings;
 
 package PIR;
 # ABSTRACT: Short alias for Path::Iterator::Rule
-our $VERSION = '1.004'; # VERSION
+our $VERSION = '1.005'; # VERSION
 
 # Dependencies
 use Path::Iterator::Rule;
@@ -27,7 +27,7 @@ PIR - Short alias for Path::Iterator::Rule
 
 =head1 VERSION
 
-version 1.004
+version 1.005
 
 =head1 SYNOPSIS
 
