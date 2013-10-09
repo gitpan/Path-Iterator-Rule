@@ -4,7 +4,7 @@ use warnings;
 
 package PIR;
 # ABSTRACT: Short alias for Path::Iterator::Rule
-our $VERSION = '1.005'; # VERSION
+our $VERSION = '1.006'; # VERSION
 
 # Dependencies
 use Path::Iterator::Rule;
@@ -27,7 +27,7 @@ PIR - Short alias for Path::Iterator::Rule
 
 =head1 VERSION
 
-version 1.005
+version 1.006
 
 =head1 SYNOPSIS
 
@@ -635,7 +635,7 @@ If you want speed over safety, set these options:
         error_handler => undef
     );
 
-Alternatively, use the C<iter_fast> and C<fast_all> methods instead, which set
+Alternatively, use the C<iter_fast> and C<all_fast> methods instead, which set
 these options for you.
 
     $iter = $rule->iter( @dirs, \%options );
@@ -776,20 +776,6 @@ See L<the speed of Perl file finders|http://rjbs.manxome.org/rubric/entry/1981>
 =head1 AUTHOR
 
 David Golden <dagolden@cpan.org>
-
-=head1 CONTRIBUTORS
-
-=over 4
-
-=item *
-
-Graham Knop <haarg@cpan.org>
-
-=item *
-
-Toby Inkster <tobyink@cpan.org>
-
-=back
 
 =head1 COPYRIGHT AND LICENSE
 

@@ -2,7 +2,7 @@ NAME
     Path::Iterator::Rule - Iterative, recursive file finder
 
 VERSION
-    version 1.005
+    version 1.006
 
 SYNOPSIS
       use Path::Iterator::Rule;
@@ -575,7 +575,7 @@ PERFORMANCE
             error_handler => undef
         );
 
-    Alternatively, use the "iter_fast" and "fast_all" methods instead, which
+    Alternatively, use the "iter_fast" and "all_fast" methods instead, which
     set these options for you.
 
         $iter = $rule->iter( @dirs, \%options );
@@ -702,21 +702,23 @@ THANKS
 SUPPORT
   Bugs / Feature Requests
     Please report any bugs or feature requests through the issue tracker at
-    <https://github.com/dagolden/path-iterator-rule/issues>. You will be
+    <https://github.com/dagolden/Path-Iterator-Rule/issues>. You will be
     notified automatically of any progress on your issue.
 
   Source Code
     This is open source software. The code repository is available for
     public review and contribution under the terms of the license.
 
-    <https://github.com/dagolden/path-iterator-rule>
+    <https://github.com/dagolden/Path-Iterator-Rule>
 
-      git clone git://github.com/dagolden/path-iterator-rule.git
+      git clone https://github.com/dagolden/Path-Iterator-Rule.git
 
 AUTHOR
     David Golden <dagolden@cpan.org>
 
 CONTRIBUTORS
+    *   David Steinbrunner <dsteinbrunner@pobox.com>
+
     *   Graham Knop <haarg@cpan.org>
 
     *   Toby Inkster <tobyink@cpan.org>

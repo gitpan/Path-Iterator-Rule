@@ -4,24 +4,21 @@ use warnings;
 
 package Path::Iterator::Rule;
 # ABSTRACT: Iterative, recursive file finder
-our $VERSION = '1.005'; # VERSION
+our $VERSION = '1.006'; # VERSION
 
 # Register warnings category
 use warnings::register;
 
 # Dependencies
 use re 'regexp_pattern';
-use Carp;
-use Data::Clone qw/data_clone/;
-use File::Basename qw/basename/;
-use File::Spec;
-use List::Util qw/first/;
+use Carp           ();
+use File::Basename ();
+use File::Spec     ();
+use List::Util     ();
 use Number::Compare 0.02;
-use Scalar::Util qw/blessed/;
-use Text::Glob qw/glob_to_regex/;
+use Scalar::Util ();
+use Text::Glob   ();
 use Try::Tiny;
-
-use namespace::clean;
 
 #--------------------------------------------------------------------------#
 # constructors and meta methods
@@ -35,7 +32,26 @@ sub new {
 
 sub clone {
     my $self = shift;
-    return data_clone($self);
+    return bless _my_clone( {%$self} ), ref $self;
+}
+
+# avoid XS/buggy dependencies for a simple recursive clone; we clone
+# fully instead of just 'rules' in case we get subclassed and they
+# add attributes
+sub _my_clone {
+    my $d = shift;
+    if ( ref $d eq 'HASH' ) {
+        return {
+            map { ; my $v = $d->{$_}; $_ => ( ref($v) ? _my_clone($v) : $v ) }
+              keys %$d
+        };
+    }
+    elsif ( ref $d eq 'ARRAY' ) {
+        return [ map { ref($_) ? _my_clone($_) : $_ } @$d ];
+    }
+    else {
+        return $d;
+    }
 }
 
 sub add_helper {
@@ -126,9 +142,9 @@ sub _iter {
     my $self     = shift;
     my $defaults = shift;
     my $args =
-        ref( $_[0] )  && !blessed( $_[0] )  ? shift
-      : ref( $_[-1] ) && !blessed( $_[-1] ) ? pop
-      :                                       {};
+        ref( $_[0] )  && !Scalar::Util::blessed( $_[0] )  ? shift
+      : ref( $_[-1] ) && !Scalar::Util::blessed( $_[-1] ) ? pop
+      :                                                     {};
     my %opts = ( %$defaults, %$args );
 
     # unroll these for efficiency
@@ -150,7 +166,10 @@ sub _iter {
     # if object is arrayref, then that's a special case signal that it
     # was already of interest and can finally be returned for postorder searches
     my @queue =
-      map { my $i = $self->_objectify($_); ( $i, basename("$_"), 0, $i ) } @_ ? @_ : '.';
+      map {
+        my $i = $self->_objectify($_);
+        ( $i, File::Basename::basename("$_"), 0, $i )
+      } @_ ? @_ : '.';
 
     return sub {
         LOOP: {
@@ -226,7 +245,14 @@ sub _iter {
                     if ($opt_depthfirst) {
                         # for postorder, requeue as reference to signal it can be returned
                         # without being retested
-                        push @next, [ ( $opt_relative ? $self->_objectify(File::Spec->abs2rel( $string_item, $origin )) : $item ) ],
+                        push @next,
+                          [
+                            (
+                                  $opt_relative
+                                ? $self->_objectify( File::Spec->abs2rel( $string_item, $origin ) )
+                                : $item
+                            )
+                          ],
                           $base, $depth, $origin
                           if $interest && $opt_depthfirst > 0;
                         unshift @queue, @next;
@@ -237,8 +263,11 @@ sub _iter {
                     }
                 }
             }
-            return ( $opt_relative ? $self->_objectify(File::Spec->abs2rel( $string_item, $origin )) : $item )
-              if $interest;
+            return (
+                  $opt_relative
+                ? $self->_objectify( File::Spec->abs2rel( $string_item, $origin ) )
+                : $item
+            ) if $interest;
             redo LOOP;
         }
     };
@@ -288,7 +317,7 @@ sub or {
             $result = $rule->(@_);
             # once any rule says to prune, we remember that
             $prune ||= ref($result) eq 'SCALAR';
-            # extract whether contraint was met
+            # extract whether constraint was met
             $result = $$result if ref($result) eq 'SCALAR';
             # shortcut if met, propagating prune state
             return ( $prune ? \1 : 1 ) if $result;
@@ -315,11 +344,11 @@ sub skip {
     my $obj     = $self->new->or(@rules);
     my $coderef = sub {
         my $result = $obj->test(@_);
-        my ($prune, $interest);
+        my ( $prune, $interest );
         if ( ref($result) eq 'SCALAR' ) {
             # test told us to prune, so make that sticky
             # and also skip it
-            $prune = 1;
+            $prune    = 1;
             $interest = 0;
         }
         else {
@@ -338,17 +367,17 @@ sub test {
     my ( $result, $prune );
     for my $rule ( @{ $self->{rules} } ) {
         $result = $rule->( $item, $base, $stash ) || 0;
-        if ( ! ref($result) && $result eq '0 but true' ) {
-            Carp::croak( "0 but true no longer supported by custom rules" );
+        if ( !ref($result) && $result eq '0 but true' ) {
+            Carp::croak("0 but true no longer supported by custom rules");
         }
         # once any rule says to prune, we remember that
         $prune ||= ref($result) eq 'SCALAR';
-        # extract whether contraint was met
+        # extract whether constraint was met
         $result = $$result if ref($result) eq 'SCALAR';
         # shortcut if not met, propagating prune state
         return ( $prune ? \0 : 0 ) if !$result;
     }
-    return ( $prune ? \1 : 1 ); # all constaints met, but propagate prune state
+    return ( $prune ? \1 : 1 ); # all constraints met, but propagate prune state
 }
 
 #--------------------------------------------------------------------------#
@@ -360,7 +389,7 @@ sub _rulify {
     my @rules;
     for my $arg (@args) {
         my $rule;
-        if ( blessed($arg) && $arg->isa("Path::Iterator::Rule") ) {
+        if ( Scalar::Util::blessed($arg) && $arg->isa("Path::Iterator::Rule") ) {
             $rule = sub { $arg->test(@_) };
         }
         elsif ( ref($arg) eq 'CODE' ) {
@@ -397,7 +426,7 @@ sub _is_unique {
 sub _regexify {
     my ( $re, $add ) = @_;
     $add ||= '';
-    my $new = ref($re) eq 'Regexp' ? $re : glob_to_regex($re);
+    my $new = ref($re) eq 'Regexp' ? $re : Text::Glob::glob_to_regex($re);
     my ( $pattern, $flags ) = regexp_pattern($new);
     my $new_flags = $add ? _reflag( $flags, $add ) : "";
     return qr/$new_flags$pattern/;
@@ -435,7 +464,7 @@ sub _generate_name_matcher {
     if ( @patterns > 1 ) {
         return sub {
             my $name = "$_[1]";
-            return ( first { $name =~ $_ } @patterns ) ? 1 : 0;
+            return ( List::Util::first { $name =~ $_ } @patterns ) ? 1 : 0;
           }
     }
     else {
@@ -459,7 +488,7 @@ my %complex_helpers = (
     },
     min_depth => sub {
         Carp::croak("No depth argument given to 'min_depth'") unless @_;
-        my $min_depth = 0 + shift; # if this warns, do here and not on every file
+        my $min_depth = 0+ shift; # if this warns, do here and not on every file
         return sub {
             my ( $f, $b, $stash ) = @_;
             return $stash->{_depth} >= $min_depth;
@@ -467,7 +496,7 @@ my %complex_helpers = (
     },
     max_depth => sub {
         Carp::croak("No depth argument given to 'max_depth'") unless @_;
-        my $max_depth = 0 + shift; # if this warns, do here and not on every file
+        my $max_depth = 0+ shift; # if this warns, do here and not on every file
         return sub {
             my ( $f, $b, $stash ) = @_;
             return 1  if $stash->{_depth} < $max_depth;
@@ -484,7 +513,7 @@ my %complex_helpers = (
             open my $fh, "<", $f;
             my $shebang = <$fh>;
             return unless defined $shebang;
-            return ( first { $shebang =~ $_ } @patterns ) ? 1 : 0;
+            return ( List::Util::first { $shebang =~ $_ } @patterns ) ? 1 : 0;
         };
     },
     contents_match => sub {
@@ -513,7 +542,7 @@ my %complex_helpers = (
             my $f = shift;
             return unless !-d $f;
             open my $fh, "<$filter", $f;
-            while (my $line = <$fh>) {
+            while ( my $line = <$fh> ) {
                 for my $re (@regexp) {
                     return 1 if $line =~ $re;
                 }
@@ -680,7 +709,7 @@ Path::Iterator::Rule - Iterative, recursive file finder
 
 =head1 VERSION
 
-version 1.005
+version 1.006
 
 =head1 SYNOPSIS
 
@@ -1330,7 +1359,7 @@ If you want speed over safety, set these options:
         error_handler => undef
     );
 
-Alternatively, use the C<iter_fast> and C<fast_all> methods instead, which set
+Alternatively, use the C<iter_fast> and C<all_fast> methods instead, which set
 these options for you.
 
     $iter = $rule->iter( @dirs, \%options );
@@ -1475,7 +1504,7 @@ See L<the speed of Perl file finders|http://rjbs.manxome.org/rubric/entry/1981>
 =head2 Bugs / Feature Requests
 
 Please report any bugs or feature requests through the issue tracker
-at L<https://github.com/dagolden/path-iterator-rule/issues>.
+at L<https://github.com/dagolden/Path-Iterator-Rule/issues>.
 You will be notified automatically of any progress on your issue.
 
 =head2 Source Code
@@ -1483,9 +1512,9 @@ You will be notified automatically of any progress on your issue.
 This is open source software.  The code repository is available for
 public review and contribution under the terms of the license.
 
-L<https://github.com/dagolden/path-iterator-rule>
+L<https://github.com/dagolden/Path-Iterator-Rule>
 
-  git clone git://github.com/dagolden/path-iterator-rule.git
+  git clone https://github.com/dagolden/Path-Iterator-Rule.git
 
 =head1 AUTHOR
 
@@ -1494,6 +1523,10 @@ David Golden <dagolden@cpan.org>
 =head1 CONTRIBUTORS
 
 =over 4
+
+=item *
+
+David Steinbrunner <dsteinbrunner@pobox.com>
 
 =item *
 

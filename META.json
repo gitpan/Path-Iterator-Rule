@@ -4,7 +4,7 @@
       "David Golden <dagolden@cpan.org>"
    ],
    "dynamic_config" : 0,
-   "generated_by" : "Dist::Zilla version 4.300031, CPAN::Meta::Converter version 2.130880",
+   "generated_by" : "Dist::Zilla version 4.300039, CPAN::Meta::Converter version 2.132810",
    "license" : [
       "apache_2_0"
    ],
@@ -27,7 +27,7 @@
    "prereqs" : {
       "configure" : {
          "requires" : {
-            "ExtUtils::MakeMaker" : "6.30"
+            "ExtUtils::MakeMaker" : "6.17"
          }
       },
       "develop" : {
@@ -39,7 +39,6 @@
       "runtime" : {
          "requires" : {
             "Carp" : "0",
-            "Data::Clone" : "0",
             "File::Basename" : "0",
             "File::Spec" : "0",
             "List::Util" : "0",
@@ -47,7 +46,6 @@
             "Scalar::Util" : "0",
             "Text::Glob" : "0",
             "Try::Tiny" : "0",
-            "namespace::clean" : "0",
             "perl" : "5.010",
             "re" : "0",
             "strict" : "0",
@@ -57,45 +55,48 @@
       },
       "test" : {
          "requires" : {
-            "Config" : "0",
             "Exporter" : "0",
             "ExtUtils::MakeMaker" : "0",
-            "File::Find" : "0",
+            "File::Spec" : "0",
             "File::Spec::Functions" : "0",
             "File::Temp" : "0",
             "File::pushd" : "0",
+            "IO::Handle" : "0",
+            "IPC::Open3" : "0",
             "Path::Tiny" : "0",
             "Test::Deep" : "0",
             "Test::Filename" : "0.03",
             "Test::More" : "0.92",
-            "autodie" : "0"
+            "lib" : "0"
          }
       }
    },
    "provides" : {
       "PIR" : {
          "file" : "lib/PIR.pm",
-         "version" : "1.005"
+         "version" : "1.006"
       },
       "Path::Iterator::Rule" : {
          "file" : "lib/Path/Iterator/Rule.pm",
-         "version" : "1.005"
+         "version" : "1.006"
       }
    },
    "release_status" : "stable",
    "resources" : {
       "bugtracker" : {
-         "web" : "https://github.com/dagolden/path-iterator-rule/issues"
+         "web" : "https://github.com/dagolden/Path-Iterator-Rule/issues"
       },
-      "homepage" : "https://metacpan.org/release/Path-Iterator-Rule",
+      "homepage" : "https://github.com/dagolden/Path-Iterator-Rule",
       "repository" : {
          "type" : "git",
-         "url" : "git://github.com/dagolden/path-iterator-rule.git",
-         "web" : "https://github.com/dagolden/path-iterator-rule"
+         "url" : "https://github.com/dagolden/Path-Iterator-Rule.git",
+         "web" : "https://github.com/dagolden/Path-Iterator-Rule"
       }
    },
-   "version" : "1.005",
+   "version" : "1.006",
+   "x_authority" : "cpan:DAGOLDEN",
    "x_contributors" : [
+      "David Steinbrunner <dsteinbrunner@pobox.com>",
       "Graham Knop <haarg@cpan.org>",
       "Toby Inkster <tobyink@cpan.org>"
    ]

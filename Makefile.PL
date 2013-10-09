@@ -4,29 +4,16 @@ use warnings;
 
 use 5.010;
 
-use ExtUtils::MakeMaker 6.30;
+use ExtUtils::MakeMaker 6.17;
 
 
 
 my %WriteMakefileArgs = (
   "ABSTRACT" => "Iterative, recursive file finder",
   "AUTHOR" => "David Golden <dagolden\@cpan.org>",
-  "BUILD_REQUIRES" => {
-    "Config" => 0,
-    "Exporter" => 0,
-    "ExtUtils::MakeMaker" => 0,
-    "File::Find" => 0,
-    "File::Spec::Functions" => 0,
-    "File::Temp" => 0,
-    "File::pushd" => 0,
-    "Path::Tiny" => 0,
-    "Test::Deep" => 0,
-    "Test::Filename" => "0.03",
-    "Test::More" => "0.92",
-    "autodie" => 0
-  },
+  "BUILD_REQUIRES" => {},
   "CONFIGURE_REQUIRES" => {
-    "ExtUtils::MakeMaker" => "6.30"
+    "ExtUtils::MakeMaker" => "6.17"
   },
   "DISTNAME" => "Path-Iterator-Rule",
   "EXE_FILES" => [],
@@ -34,7 +21,6 @@ my %WriteMakefileArgs = (
   "NAME" => "Path::Iterator::Rule",
   "PREREQ_PM" => {
     "Carp" => 0,
-    "Data::Clone" => 0,
     "File::Basename" => 0,
     "File::Spec" => 0,
     "List::Util" => 0,
@@ -42,18 +28,45 @@ my %WriteMakefileArgs = (
     "Scalar::Util" => 0,
     "Text::Glob" => 0,
     "Try::Tiny" => 0,
-    "namespace::clean" => 0,
     "re" => 0,
     "strict" => 0,
     "warnings" => 0,
     "warnings::register" => 0
   },
-  "VERSION" => "1.005",
+  "TEST_REQUIRES" => {
+    "Exporter" => 0,
+    "ExtUtils::MakeMaker" => 0,
+    "File::Spec" => 0,
+    "File::Spec::Functions" => 0,
+    "File::Temp" => 0,
+    "File::pushd" => 0,
+    "IO::Handle" => 0,
+    "IPC::Open3" => 0,
+    "Path::Tiny" => 0,
+    "Test::Deep" => 0,
+    "Test::Filename" => "0.03",
+    "Test::More" => "0.92",
+    "lib" => 0
+  },
+  "VERSION" => "1.006",
   "test" => {
     "TESTS" => "t/*.t"
   }
 );
 
+
+unless ( eval { ExtUtils::MakeMaker->VERSION(6.63_03) } ) {
+  my $tr = delete $WriteMakefileArgs{TEST_REQUIRES};
+  my $br = $WriteMakefileArgs{BUILD_REQUIRES};
+  for my $mod ( keys %$tr ) {
+    if ( exists $br->{$mod} ) {
+      $br->{$mod} = $tr->{$mod} if $tr->{$mod} > $br->{$mod};
+    }
+    else {
+      $br->{$mod} = $tr->{$mod};
+    }
+  }
+}
 
 unless ( eval { ExtUtils::MakeMaker->VERSION(6.56) } ) {
   my $br = delete $WriteMakefileArgs{BUILD_REQUIRES};

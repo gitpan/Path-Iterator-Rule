@@ -6,6 +6,7 @@ META.json
 META.yml
 Makefile.PL
 README
+cpanfile
 dist.ini
 examples/modules-in-inc.pl
 lib/PIR.pm
@@ -36,6 +37,7 @@ t/unsorted.t
 t/vcs.t
 t/visitor.t
 t/x_tests.t
+tidyall.ini
 xt/author/critic.t
 xt/author/pod-spell.t
 xt/release/distmeta.t

@@ -11,16 +11,15 @@ use List::Util qw/max/;
 
 my @modules = qw(
   Carp
-  Config
-  Data::Clone
   Exporter
   ExtUtils::MakeMaker
   File::Basename
-  File::Find
   File::Spec
   File::Spec::Functions
   File::Temp
   File::pushd
+  IO::Handle
+  IPC::Open3
   List::Util
   Number::Compare
   Path::Tiny
@@ -30,8 +29,7 @@ my @modules = qw(
   Test::More
   Text::Glob
   Try::Tiny
-  autodie
-  namespace::clean
+  lib
   perl
   re
   strict
