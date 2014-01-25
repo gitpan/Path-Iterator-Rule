@@ -1,5 +1,11 @@
 Revision history for Path-Iterator-Rule
 
+1.007     2014-01-25 14:39:09-05:00 America/New_York
+
+    [DOCS]
+
+    - Document the behavior of ->all in scalar context
+
 1.006     2013-10-09 11:14:28 America/New_York
 
     [PREREQS]

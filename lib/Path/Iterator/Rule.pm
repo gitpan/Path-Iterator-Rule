@@ -4,7 +4,7 @@ use warnings;
 
 package Path::Iterator::Rule;
 # ABSTRACT: Iterative, recursive file finder
-our $VERSION = '1.006'; # VERSION
+our $VERSION = '1.007'; # VERSION
 
 # Register warnings category
 use warnings::register;
@@ -286,15 +286,20 @@ sub all_fast {
 sub _all {
     my $self = shift;
     my $iter = shift;
-    if ( defined wantarray ) {
+    if (wantarray) {
         my @results;
-        while ( my $item = $iter->() ) {
+        while ( defined( my $item = $iter->() ) ) {
             push @results, $item;
         }
         return @results;
     }
+    elsif ( defined wantarray ) {
+        my $count = 0;
+        $count++ while defined $iter->();
+        return $count;
+    }
     else {
-        1 while $iter->();
+        1 while defined $iter->();
     }
 }
 
@@ -701,7 +706,7 @@ __END__
 
 =pod
 
-=encoding utf-8
+=encoding UTF-8
 
 =head1 NAME
 
@@ -709,7 +714,7 @@ Path::Iterator::Rule - Iterative, recursive file finder
 
 =head1 VERSION
 
-version 1.006
+version 1.007
 
 =head1 SYNOPSIS
 
@@ -720,7 +725,7 @@ version 1.006
 
   # iterator interface
   my $next = $rule->iter( @dirs );
-  while ( my $file = $next->() ) {
+  while ( defined( my $file = $next->() ) ) {
     ...
   }
 
@@ -806,7 +811,7 @@ rule objects against a common base.
 =head3 C<iter>
 
   my $next = $rule->iter( @dirs, \%options);
-  while ( my $file = $next->() ) {
+  while ( defined( my $file = $next->() ) ) {
     ...
   }
 
@@ -881,6 +886,8 @@ subdirectories like C<@INC> or symbolic links), files found could be returned
 relative to different initial search directories based on C<depthfirst>,
 C<follow_symlinks> or C<loop_safe>.
 
+When the iterator is exhausted, it will return undef.
+
 =head3 C<iter_fast>
 
 This works just like C<iter>, except that it optimizes for speed over
@@ -894,6 +901,8 @@ the consequences.  See L</PERFORMANCE> for details.
 Returns a list of paths that match the rule.  It takes the same arguments and
 has the same behaviors as the C<iter> method.  The C<all> method uses C<iter>
 internally to fetch all results.
+
+In scalar context, it will return the count of matched paths.
 
 In void context, it is optimized to iterate over everything, but not store
 results.  This is most useful with the C<visitor> option:
@@ -1293,7 +1302,7 @@ if the filename is "foo":
     foo => sub {
       my @args = @_; # do this to customize closure with arguments
       return sub {
-        my ($item, $basename) = shift;
+        my ($item, $basename) = @_;
         return if -d "$item";
         return $basename =~ /^foo$/;
       }
@@ -1531,6 +1540,10 @@ David Steinbrunner <dsteinbrunner@pobox.com>
 =item *
 
 Graham Knop <haarg@cpan.org>
+
+=item *
+
+Ricardo Signes <rjbs@cpan.org>
 
 =item *
 

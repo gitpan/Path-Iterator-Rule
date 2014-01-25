@@ -4,7 +4,7 @@ use warnings;
 
 package PIR;
 # ABSTRACT: Short alias for Path::Iterator::Rule
-our $VERSION = '1.006'; # VERSION
+our $VERSION = '1.007'; # VERSION
 
 # Dependencies
 use Path::Iterator::Rule;
@@ -19,7 +19,7 @@ __END__
 
 =pod
 
-=encoding utf-8
+=encoding UTF-8
 
 =head1 NAME
 
@@ -27,7 +27,7 @@ PIR - Short alias for Path::Iterator::Rule
 
 =head1 VERSION
 
-version 1.006
+version 1.007
 
 =head1 SYNOPSIS
 
@@ -38,7 +38,7 @@ version 1.006
 
   # iterator interface
   my $next = $rule->iter( @dirs );
-  while ( my $file = $next->() ) {
+  while ( defined( my $file = $next->() ) ) {
     ...
   }
 
@@ -53,8 +53,6 @@ This is an empty subclass of L<Path::Iterator::Rule>.  It saves you from having 
 the full name repeatedly, which is particularly handy for one-liners:
 
     $ perl -MPIR -wE 'say for PIR->new->skip_dirs(".")->perl_module->all(@INC)'
-
-=for Pod::Coverage method_names_here
 
 =head1 USAGE
 
@@ -82,7 +80,7 @@ rule objects against a common base.
 =head3 C<iter>
 
   my $next = $rule->iter( @dirs, \%options);
-  while ( my $file = $next->() ) {
+  while ( defined( my $file = $next->() ) ) {
     ...
   }
 
@@ -157,6 +155,8 @@ subdirectories like C<@INC> or symbolic links), files found could be returned
 relative to different initial search directories based on C<depthfirst>,
 C<follow_symlinks> or C<loop_safe>.
 
+When the iterator is exhausted, it will return undef.
+
 =head3 C<iter_fast>
 
 This works just like C<iter>, except that it optimizes for speed over
@@ -170,6 +170,8 @@ the consequences.  See L</PERFORMANCE> for details.
 Returns a list of paths that match the rule.  It takes the same arguments and
 has the same behaviors as the C<iter> method.  The C<all> method uses C<iter>
 internally to fetch all results.
+
+In scalar context, it will return the count of matched paths.
 
 In void context, it is optimized to iterate over everything, but not store
 results.  This is most useful with the C<visitor> option:
@@ -240,6 +242,8 @@ the object to allow method chaining.
 
 This method should be called as early as possible in the rule chain.
 See L</skip_dirs> below for further explanation and an example.
+
+=for Pod::Coverage method_names_here
 
 =head1 RULE METHODS
 
@@ -569,7 +573,7 @@ if the filename is "foo":
     foo => sub {
       my @args = @_; # do this to customize closure with arguments
       return sub {
-        my ($item, $basename) = shift;
+        my ($item, $basename) = @_;
         return if -d "$item";
         return $basename =~ /^foo$/;
       }
