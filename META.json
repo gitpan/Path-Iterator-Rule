@@ -84,11 +84,11 @@
    "provides" : {
       "PIR" : {
          "file" : "lib/PIR.pm",
-         "version" : "1.007"
+         "version" : "1.008"
       },
       "Path::Iterator::Rule" : {
          "file" : "lib/Path/Iterator/Rule.pm",
-         "version" : "1.007"
+         "version" : "1.008"
       }
    },
    "release_status" : "stable",
@@ -103,10 +103,11 @@
          "web" : "https://github.com/dagolden/Path-Iterator-Rule"
       }
    },
-   "version" : "1.007",
+   "version" : "1.008",
    "x_authority" : "cpan:DAGOLDEN",
    "x_contributors" : [
       "David Steinbrunner <dsteinbrunner@pobox.com>",
+      "Gian Piero Carrubba <gpiero@butterfly.fdc.rm-rf.it>",
       "Graham Knop <haarg@cpan.org>",
       "Ricardo Signes <rjbs@cpan.org>",
       "Toby Inkster <tobyink@cpan.org>"

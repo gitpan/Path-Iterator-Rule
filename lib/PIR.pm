@@ -4,7 +4,7 @@ use warnings;
 
 package PIR;
 # ABSTRACT: Short alias for Path::Iterator::Rule
-our $VERSION = '1.007'; # VERSION
+our $VERSION = '1.008'; # VERSION
 
 # Dependencies
 use Path::Iterator::Rule;
@@ -27,7 +27,7 @@ PIR - Short alias for Path::Iterator::Rule
 
 =head1 VERSION
 
-version 1.007
+version 1.008
 
 =head1 SYNOPSIS
 
@@ -400,6 +400,7 @@ of Perl distribution files.
   $rule->skip_git;
   $rule->skip_bzr;
   $rule->skip_hg;
+  $rule->skip_darcs;
 
 Skips files and/or prunes directories related to a version control system.
 Just like C<skip_dirs>, these rules should be specified early to get the

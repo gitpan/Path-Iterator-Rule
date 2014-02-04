@@ -34,10 +34,10 @@ no_index:
 provides:
   PIR:
     file: lib/PIR.pm
-    version: 1.007
+    version: 1.008
   Path::Iterator::Rule:
     file: lib/Path/Iterator/Rule.pm
-    version: 1.007
+    version: 1.008
 requires:
   Carp: 0
   File::Basename: 0
@@ -56,10 +56,11 @@ resources:
   bugtracker: https://github.com/dagolden/Path-Iterator-Rule/issues
   homepage: https://github.com/dagolden/Path-Iterator-Rule
   repository: https://github.com/dagolden/Path-Iterator-Rule.git
-version: 1.007
+version: 1.008
 x_authority: cpan:DAGOLDEN
 x_contributors:
   - 'David Steinbrunner <dsteinbrunner@pobox.com>'
+  - 'Gian Piero Carrubba <gpiero@butterfly.fdc.rm-rf.it>'
   - 'Graham Knop <haarg@cpan.org>'
   - 'Ricardo Signes <rjbs@cpan.org>'
   - 'Toby Inkster <tobyink@cpan.org>'

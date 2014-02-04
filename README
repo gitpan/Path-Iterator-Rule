@@ -2,7 +2,7 @@ NAME
     Path::Iterator::Rule - Iterative, recursive file finder
 
 VERSION
-    version 1.007
+    version 1.008
 
 SYNOPSIS
       use Path::Iterator::Rule;
@@ -369,6 +369,7 @@ RULE METHODS
       $rule->skip_git;
       $rule->skip_bzr;
       $rule->skip_hg;
+      $rule->skip_darcs;
 
     Skips files and/or prunes directories related to a version control
     system. Just like "skip_dirs", these rules should be specified early to
@@ -722,6 +723,8 @@ AUTHOR
 
 CONTRIBUTORS
     *   David Steinbrunner <dsteinbrunner@pobox.com>
+
+    *   Gian Piero Carrubba <gpiero@butterfly.fdc.rm-rf.it>
 
     *   Graham Knop <haarg@cpan.org>
 

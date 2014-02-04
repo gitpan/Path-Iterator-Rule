@@ -4,7 +4,7 @@ use warnings;
 
 package Path::Iterator::Rule;
 # ABSTRACT: Iterative, recursive file finder
-our $VERSION = '1.007'; # VERSION
+our $VERSION = '1.008'; # VERSION
 
 # Register warnings category
 use warnings::register;
@@ -660,8 +660,11 @@ my %vcs_rules = (
     skip_hg => sub {
         return Path::Iterator::Rule->new->skip_dirs('.hg');
     },
+    skip_darcs => sub {
+        return Path::Iterator::Rule->new->skip_dirs('_darcs');
+    },
     skip_vcs => sub {
-        return Path::Iterator::Rule->new->skip_dirs(qw/.git .bzr .hg CVS RCS/)
+        return Path::Iterator::Rule->new->skip_dirs(qw/.git .bzr .hg _darcs CVS RCS/)
           ->skip_svn->not_name( qr/\.\#$/, qr/,v$/ );
     },
 );
@@ -714,7 +717,7 @@ Path::Iterator::Rule - Iterative, recursive file finder
 
 =head1 VERSION
 
-version 1.007
+version 1.008
 
 =head1 SYNOPSIS
 
@@ -1129,6 +1132,7 @@ of Perl distribution files.
   $rule->skip_git;
   $rule->skip_bzr;
   $rule->skip_hg;
+  $rule->skip_darcs;
 
 Skips files and/or prunes directories related to a version control system.
 Just like C<skip_dirs>, these rules should be specified early to get the
@@ -1536,6 +1540,10 @@ David Golden <dagolden@cpan.org>
 =item *
 
 David Steinbrunner <dsteinbrunner@pobox.com>
+
+=item *
+
+Gian Piero Carrubba <gpiero@butterfly.fdc.rm-rf.it>
 
 =item *
 
